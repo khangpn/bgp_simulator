@@ -4,7 +4,7 @@
 #include <netdb.h>      // Needed for the socket functions
 #include <unistd.h>
 
-void bgp_listen()
+void bgp_listen(char *port)
 {
   /* Setting up struct */
   int status;
@@ -25,14 +25,14 @@ void bgp_listen()
 
   // Now fill up the linked list of host_info structs with our localhost information
   // NULL for localhost
-  status = getaddrinfo(NULL, "3000", &host_info, &host_info_list);
+  status = getaddrinfo(NULL, port, &host_info, &host_info_list);
   // getaddrinfo returns 0 on succes, or some other value when an error occured.
   // (translated into human readable text by the gai_gai_strerror function).
   if (status != 0)  std::cout << "getaddrinfo error" << gai_strerror(status) << std::endl;
   /* ========== END ========== */
     
   /* Setting up socket */
-  std::cout << "Creating a socket..."  << std::endl;
+  std::cout << "Creating a socket, port:" << port << "..."  << std::endl;
   int socketfd ; // The socket descripter
   socketfd = socket(host_info_list->ai_family, host_info_list->ai_socktype, 
   host_info_list->ai_protocol);
@@ -88,7 +88,7 @@ void bgp_listen()
 
     /* Sending message */
     std::cout << "send()ing message..."  << std::endl;
-    char *msg = "HELLO CLIENT";
+    char msg[] = "HELLO CLIENT";
     int len;
     ssize_t bytes_sent;
     len = strlen(msg);
