@@ -4,18 +4,71 @@
 #include <netdb.h>      // Needed for the socket functions
 #include <unistd.h>
 #include <thread>
-#include <string> // for std::string
 #include <fstream>
+#include <string> // for std::string
+#include <sstream> // for std::stringstream
+#include <map> // for std::map
+#include <stdlib.h> // for std::sleep
 
 using namespace std;
 
-void bgp_send(char *port);
+void bgp_send(char *port, char *message);
 void bgp_listen(char *port);
+void setup_listener();
+map<string, string> setup_neighbours();
 
 int main()
 {
-  /* Setup AS server */
+  map<string, string> neighbours;
 
+  cout << ">>> Setting up AS..." << endl;
+  thread thread1(setup_listener);
+  thread1.detach();
+
+  cout << ">>> Setting up neighbours..." << endl;
+  neighbours = setup_neighbours();
+  //while(true) {
+  //  cout << "Working..." << endl;
+  //  sleep(1);
+  //}
+  for (map<string, string>::iterator it=neighbours.begin(); it!=neighbours.end(); ++it) {
+    cout << it->first << " " << it->second << endl;
+    // Convert string to char[]
+    char port[10];
+    strcpy(port, it->second.c_str());
+    bgp_send(port, port);
+  }
+
+  return 0;
+}
+
+map<string, string> setup_neighbours()
+{
+  map<string, string> neighbours;
+  /* Setup AS links */
+  // Read configuration file
+  string line;
+  ifstream links_file;
+  ifstream config_file;
+  config_file.open("neighbours.csv");
+  while(getline(config_file, line))
+  {
+    stringstream lineStream(line);
+    string nb_name;
+    string nb_port;
+    std::getline(lineStream, nb_name, ',');
+    std::getline(lineStream, nb_port, ',');
+    neighbours[nb_name] = nb_port;
+  }
+  config_file.close();
+  return neighbours;
+  /* ========== END ========== */
+
+}
+
+void setup_listener()
+{
+  /* Setup AS server */
   // Read configuration file
   string port;
   ifstream config_file;
@@ -27,28 +80,8 @@ int main()
   char listen_port[10];
   strcpy(listen_port, port.c_str());
 
-  thread thread1(bgp_listen, listen_port);
-  thread1.detach();
-  /* ========== END ========== */
+  bgp_listen(listen_port);
 
-  /* Setup AS links */
-
-  // Read configuration file
-  string link;
-  ifstream links_file;
-  config_file.open("as_links.csv");
-  while(getline(config_file, link))
-  {
-    // Convert string to char[]
-    char link_port[10];
-    strcpy(link_port, link.c_str());
-
-    thread thread2(bgp_send, link_port);
-    thread2.join();
-  }
   config_file.close();
-
   /* ========== END ========== */
-
-  return 0;
 }

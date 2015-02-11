@@ -4,7 +4,7 @@
 #include <netdb.h>      // Needed for the socket functions
 #include <unistd.h>
 
-void bgp_send(char *port)
+void bgp_send(char *port, char *message)
 {
   /* Setting up struct */
   int status;
@@ -36,13 +36,25 @@ void bgp_send(char *port)
     int socketfd ; // The socket descripter
     socketfd = socket(host_info_list->ai_family, host_info_list->ai_socktype, 
     host_info_list->ai_protocol);
-    if (socketfd == -1)  std::cout << "socket error " ;
+    // If the socket is errorous, retry in 2 seconds
+    if (socketfd == -1) {
+      std::cout << "socket error " ;
+      close(socketfd);
+      sleep(2);
+      continue;
+    }
     /* ========== END ========== */
 
     /* Connect to the port */
     std::cout << "Connect()ing..."  << std::endl;
     status = connect(socketfd, host_info_list->ai_addr, host_info_list->ai_addrlen);
-    if (status == -1)  std::cout << "connect error" ;
+    // If the connection can not be established, retry in 2 seconds
+    if (status == -1) {
+      std::cout << "connect error" ;
+      close(socketfd);
+      sleep(2);
+      continue;
+    }
     /* ========== END ========== */
 
     /* Sending message */

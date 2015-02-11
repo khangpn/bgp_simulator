@@ -4,6 +4,8 @@
 #include <netdb.h>      // Needed for the socket functions
 #include <unistd.h>
 
+using namespace std;
+
 void bgp_listen(char *port)
 {
   /* Setting up struct */
