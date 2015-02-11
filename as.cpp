@@ -27,17 +27,23 @@ int main()
 
   cout << ">>> Setting up neighbours..." << endl;
   neighbours = setup_neighbours();
-  //while(true) {
-  //  cout << "Working..." << endl;
-  //  sleep(1);
-  //}
-  for (map<string, string>::iterator it=neighbours.begin(); it!=neighbours.end(); ++it) {
-    cout << it->first << " " << it->second << endl;
-    // Convert string to char[]
-    char port[10];
-    strcpy(port, it->second.c_str());
-    bgp_send(port, port);
+
+  // SAMPLE: Send a message to all neighbour every 5s
+  while(true) {
+    for (map<string, string>::iterator it=neighbours.begin(); it!=neighbours.end(); ++it) {
+      //cout << it->first << " " << it->second << endl;
+      // Convert string to char[]
+      char port[10];
+      strcpy(port, it->second.c_str());
+
+      char msg[] = "Hello ";
+      strcat(msg, port);
+      bgp_send(port, msg);
+    }
+    cout << ">>> Message sent" << endl;
+    sleep(5);
   }
+  // end of SAMPLE
 
   return 0;
 }

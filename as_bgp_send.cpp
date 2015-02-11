@@ -4,7 +4,7 @@
 #include <netdb.h>      // Needed for the socket functions
 #include <unistd.h>
 
-void bgp_send(char *port, char *message)
+void bgp_send(char *port, char *msg)
 {
   /* Setting up struct */
   int status;
@@ -29,8 +29,8 @@ void bgp_send(char *port, char *message)
   if (status != 0)  std::cout << "getaddrinfo error" << gai_strerror(status) << std::endl;
   /* ========== END ========== */
     
-  while(true)
-  {
+  //while(true)
+  //{
     /* Setting up socket */
     std::cout << "Creating a socket..."  << std::endl;
     int socketfd ; // The socket descripter
@@ -40,8 +40,8 @@ void bgp_send(char *port, char *message)
     if (socketfd == -1) {
       std::cout << "socket error " ;
       close(socketfd);
-      sleep(2);
-      continue;
+      freeaddrinfo(host_info_list);
+      return;
     }
     /* ========== END ========== */
 
@@ -52,15 +52,15 @@ void bgp_send(char *port, char *message)
     if (status == -1) {
       std::cout << "connect error" ;
       close(socketfd);
-      sleep(2);
-      continue;
+      freeaddrinfo(host_info_list);
+      return;
     }
     /* ========== END ========== */
 
     /* Sending message */
     std::cout << "send()ing message to:" << port << "..."  << std::endl;
-    char msg[1000];
-    std::cin >> msg;
+    //char msg[1000];
+    //std::cin >> msg;
     int len;
     ssize_t bytes_sent;
     len = strlen(msg);
@@ -80,11 +80,11 @@ void bgp_send(char *port, char *message)
     /* ========== END ========== */
 
     close(socketfd);
-  }
+  //}
 
   /* Closing connection */
   //std::cout << "Receiving complete. Closing socket..." << std::endl;
-  //freeaddrinfo(host_info_list);
+  freeaddrinfo(host_info_list);
   //close(socketfd);
   /* ========== END ========== */
 }
