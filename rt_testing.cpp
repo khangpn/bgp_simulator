@@ -10,17 +10,23 @@ int main(void)
 	routeTable myRouteTable; // create and initiaize route table
 
 	// set up some routes for testing (these may do not make sense now):
-	string ASPATH = "1 2 4 3"; string ASID ="10000";
-	myRouteTable.addRoute(ASID, ASPATH, 0x000F, 0x8844, 0x2344,1);
+	string ASPATH = "1 2 4 3"; string ASID ="12345";
+	myRouteTable.addRoute(ASID, ASPATH, 0x000F, 8, 0x8844, 0x2344,1);
+	ASID = "12345"; ASPATH = "1 4 2 3";
+	myRouteTable.addRoute(ASID, ASPATH, 0x000F, 8, 0x0F00, 0x2344,1);
 	ASID = "00042"; ASPATH = "1 4 2 3";
-	myRouteTable.addRoute(ASID, ASPATH, 0x000F, 0xFFF0, 0x2344,2);
+	myRouteTable.addRoute(ASID, ASPATH, 0x000F, 8, 0xFFF0, 0x2344,2);
 	ASID = "20500"; ASPATH = "1";
-	myRouteTable.addRoute(ASID, ASPATH, 0xFFFF, 0x1234, 0xFFFF,0);
+	myRouteTable.addRoute(ASID, ASPATH, 0xFFFF, 0, 0x1234, 0xFFFF,0);
 
 	// test the other routines:
 
 	// RouteCount:
-	std::cout << "Current routeTable route count: " << myRouteTable.routeCount() << std::endl;
+	cout << "Current routeTable route count: " << myRouteTable.routeCount() << endl;
+
+	// routeQuery:
+	//cout << "Route query result for X: " << myRouteTable.queryRoute(0x000F) << "." << endl;
+	printf( "Route query result for X: %x\n", myRouteTable.queryRoute(0x000F));
 
 	// routeDelete:
 

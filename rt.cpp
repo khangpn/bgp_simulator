@@ -52,8 +52,6 @@ public:
 
 routeTable() {
 
-	// routing table, fixed side max 1000 entries now
-
 	// init rt item count:
 	rt.items = 0;
 
@@ -61,7 +59,7 @@ routeTable() {
 
 ~routeTable(){};// Destructor
 
-int addRoute(string ASID, string ASPATH, unsigned int mask, unsigned int nextHop, unsigned int target, int priority);
+int addRoute(string ASID, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority);
 int queryRoute(int destination);
 int deleteRoute();
 int routeCount();
@@ -74,6 +72,7 @@ int routeCount();
 
 int routeTable::addRoute(string ASID, string ASPATH,
 							unsigned int mask,
+							unsigned int prefixlen,
 							unsigned int nextHop,
 							unsigned int target,
 							int priority)
@@ -82,8 +81,10 @@ int routeTable::addRoute(string ASID, string ASPATH,
 
 	rtRow.ASPATH = ASPATH;
 	rtRow.mask = mask;
+	rtRow.prefixlen = prefixlen;
 	rtRow.nextHop = nextHop;
 	rtRow.target = target;
+	rtRow.priority = priority;
 
 	rt.ri[rt.items] = rtRow;
 	rt.items++;
@@ -91,10 +92,56 @@ int routeTable::addRoute(string ASID, string ASPATH,
 	return 0;
 }
 
+/**
+ * returns the AS IP address to send the packet to, for the packet that is on route to destination
+ * return -1 on error (his should be rare situation. There should always be a default route, unless you are on the very top.)
+ */
 int routeTable::queryRoute(int destination)
 {
-	return rt.ri[0].nextHop;
-}
+	// \to-do { can we be sure there is no thread conflict that changes e.g. rt.items }
+	int ri;
+	int resultDst = -1;
+	// iterate rt
+	//printf("route items: %i\n", rt.items);
+	routingItem_t rtRow; // to be used in iterations and comparisons
+	routingItem_t rtRowBest; // Best match saved here
+	int match_found = 0; // indicates if match is already found or not \to-do { match_found could be avoided if rtRowBest is null until first match is found}++
+
+	for (ri = 0; ri < rt.items; ri++)
+	{
+		rtRow = rt.ri[ri];
+		printf("route item: %i, pri:%i: ", ri, rtRow.priority);
+		if ( rtRow.priority == 1 )
+		{
+			cout << ri << ": " << "pri1=|" << rtRow.ASID << "| ";
+			resultDst = rtRow.nextHop;
+		}
+
+		// calculate if match found for destination in route table entries
+
+		if ( ( rtRow.mask & rtRow.target ) == ( rtRow.mask & destination ) )
+		{
+			printf("matchA1! prefixlen:%i\n", rtRow.prefixlen);
+			resultDst = rtRow.nextHop;
+		}
+
+		// alternative / better / wrong way to compute match?!:
+		if ( ( rtRow.target >> rtRow.prefixlen ) == ( destination >> rtRow.prefixlen ) )
+		{
+			printf("matchA2! prefixlen:%i\n", rtRow.prefixlen);
+			resultDst = rtRow.nextHop;
+		}
+		cout << endl;
+	}
+
+	if ( resultDst > -1 )
+		return resultDst;
+
+	if ( rt.items > 0)
+		return rt.ri[0].nextHop; // initially just sent any valid AS IP from the RT
+	else
+		return -1;
+} // ::queryRoute
 
 /**
  * @name    route count
