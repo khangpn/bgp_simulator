@@ -83,9 +83,20 @@ void bgp_listen(char *port)
     // If no data arrives, the program will just wait here until some data arrives.
     if (bytes_recieved == 0) std::cout << "host shut down." << std::endl ;
     if (bytes_recieved == -1)std::cout << "recieve error!" << std::endl ;
-    std::cout << bytes_recieved << " bytes recieved :" << std::endl ;
+std::cout << bytes_recieved << " bytes recieved : ";// << std::endl ;
     incomming_data_buffer[bytes_recieved] = '\0';
     std::cout << incomming_data_buffer << std::endl;
+/*JH
+ if ( is_valid_IPv4_packet( incomming_data_buffer, bytes_recieved ) )
+ switch BGP_type( incomming_data_buffer, bytes_recieved )
+ {
+ 	 case KEEPALIVE:
+ 	 case UPDATE:
+ 	 case RESETetc:
+ 	 case default:
+ }
+*/
+
     /* ========== END ========== */
 
     /* Sending message */

@@ -39,10 +39,12 @@ int main()
       char msg[] = "Hello ";
       strcat(msg, port);
       bgp_send(port, msg);
-    }
+    } // for
     cout << ">>> Message sent" << endl;
-    sleep(5);
-  }
+//sleep(5);
+cout << endl;
+sleep(15);
+  } // while
   // end of SAMPLE
 
   return 0;
