@@ -7,7 +7,7 @@
 
 int main(void)
 {
-	routeTable myRouteTable; // create and initiaize route table
+	routeTable myRouteTable; // create and initialize route table
 
 	// set up some routes for testing (these may do not make sense now):
 	string ASPATH = "1 2 4 3"; string ASID ="12345";
