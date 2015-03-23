@@ -4,6 +4,9 @@
 #include <netdb.h>      // Needed for the socket functions
 #include <unistd.h>
 
+#include <arpa/inet.h>
+#include <stdio.h>
+
 void bgp_send(char *port, char *msg)
 {
   /* Setting up struct */
@@ -20,10 +23,14 @@ void bgp_send(char *port, char *msg)
   std::cout << "Setting up the structs..."  << std::endl;
 
   host_info.ai_family = AF_UNSPEC;     // IP version not specified. Can be both.
+host_info.ai_family = AF_INET; // we are using IPv4!
   host_info.ai_socktype = SOCK_STREAM; // Use SOCK_STREAM for TCP or SOCK_DGRAM for UDP.
 
   // Now fill up the linked list of host_info structs with google's address information.
-  status = getaddrinfo("localhost", port, &host_info, &host_info_list);
+
+//JH://status = getaddrinfo("localhost", port, &host_info, &host_info_list);
+status = getaddrinfo("127.0.0.1", port, &host_info, &host_info_list);
+
   // getaddrinfo returns 0 on succes, or some other value when an error occured.
   // (translated into human readable text by the gai_gai_strerror function).
   if (status != 0)  std::cout << "getaddrinfo error" << gai_strerror(status) << std::endl;
@@ -46,15 +53,31 @@ void bgp_send(char *port, char *msg)
     /* ========== END ========== */
 
     /* Connect to the port */
-    std::cout << "Connect()ing..."  << std::endl;
+
+/*
+    struct mysockaddr *ai_addr;
+struct sockaddr_in serv_addr, cli_addr;
+bzero((char *) &serv_addr, sizeof(serv_addr));
+serv_addr.sin_family = AF_INET;
+serv_addr.sin_addr.s_addr = INADDR_ANY;
+serv_addr.sin_port = htons(portno);
+*/
+// cf. http://www.linuxhowtos.org/C_C++/socket.htm
+do
+{
+std::cout << "Connect()ing... to sockedfd:"  << socketfd << std::endl;
     status = connect(socketfd, host_info_list->ai_addr, host_info_list->ai_addrlen);
     // If the connection can not be established, retry in 2 seconds
     if (status == -1) {
-      std::cout << "connect error" ;
-      close(socketfd);
-      freeaddrinfo(host_info_list);
-      return;
+	// what is ai_addr ... printf(" >%i(%s)< ", host_info_list->ai_addr, inet_ntoa(127*8*8*8+0+0+1) ); // 0x600080aa0);
+      std::cout << "connect error (to: ai_addr=" <<  host_info_list->ai_addr << ") " << "status:" << status << "! ";
+//      close(socketfd);
+//      freeaddrinfo(host_info_list);
+//      return;
+sleep(2);
     }
+} while ( status < 0 );
+
     /* ========== END ========== */
 
     /* Sending message */

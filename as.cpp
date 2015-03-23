@@ -10,6 +10,10 @@
 #include <map> // for std::map
 #include <stdlib.h> // for std::sleep
 
+#define SETUP_CONFIG_FILENAME "as_configs"
+#define SETUP_NEIGHBOUR_FILENAME "neighbours.csv"
+
+
 using namespace std;
 
 void bgp_send(char *port, char *message);
@@ -58,7 +62,7 @@ map<string, string> setup_neighbours()
   string line;
   ifstream links_file;
   ifstream config_file;
-  config_file.open("neighbours.csv");
+  config_file.open(SETUP_NEIGHBOUR_FILENAME);
   while(getline(config_file, line))
   {
     stringstream lineStream(line);
@@ -80,7 +84,7 @@ void setup_listener()
   // Read configuration file
   string port;
   ifstream config_file;
-  config_file.open("as_configs");
+  config_file.open( SETUP_CONFIG_FILENAME );
   getline(config_file, port);
   config_file.close();
 

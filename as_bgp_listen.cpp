@@ -21,7 +21,7 @@ void bgp_listen(char *port)
 
   std::cout << "Setting up the structs..."  << std::endl;
 
-  host_info.ai_family = AF_INET; // IPV4 only!, IPv6=AF_UNSPEC;     // IP version not specified. Can be both.
+  host_info.ai_family = AF_INET; // NO! lets use IPv4 -- AF_UNSPEC;     // IP version not specified. Can be both.
   host_info.ai_socktype = SOCK_STREAM; // Use SOCK_STREAM for TCP or SOCK_DGRAM for UDP.
     host_info.ai_flags = AI_PASSIVE;     // IP Wildcard
 

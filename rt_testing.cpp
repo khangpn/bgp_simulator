@@ -7,7 +7,7 @@
 
 int main(void)
 {
-	routeTable myRouteTable; // create and initialize route table
+	routeTable myRouteTable; // create and initiaize route table
 
 	// set up some routes for testing (these may do not make sense now):
 	string ASPATH = "1 2 4 3"; string ASID ="12345";
@@ -18,6 +18,9 @@ int main(void)
 	myRouteTable.addRoute(ASID, ASPATH, 0x000F, 8, 0xFFF0, 0x2344,2);
 	ASID = "20500"; ASPATH = "1";
 	myRouteTable.addRoute(ASID, ASPATH, 0xFFFF, 0, 0x1234, 0xFFFF,0);
+
+	// set up trusted route:
+	myRouteTable.addRoute(ASID, ASPATH, 0xFFFF, 0, 0x1234, 0xFFFF,0,1000);
 
 	// test the other routines:
 

@@ -39,6 +39,7 @@ struct routingItem_t
 	string ASPATH; // for informative purposes or advanced routing decisions
 	string ASID; // \to-do { should this be ASNAME as more descriptive convention }
 	int priority; // pri 0 for default route, all other routest pri at least 1
+	unsigned int trust;
 
 };
 
@@ -60,6 +61,8 @@ routeTable() {
 ~routeTable(){};// Destructor
 
 int addRoute(string ASID, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority);
+int addRoute(string ASID, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority,
+			unsigned int trust);
 int queryRoute(int destination);
 int deleteRoute();
 int routeCount();
@@ -70,6 +73,9 @@ int routeCount();
 	//return 0;
 }*/
 
+/*
+ *
+ */
 int routeTable::addRoute(string ASID, string ASPATH,
 							unsigned int mask,
 							unsigned int prefixlen,
@@ -85,12 +91,37 @@ int routeTable::addRoute(string ASID, string ASPATH,
 	rtRow.nextHop = nextHop;
 	rtRow.target = target;
 	rtRow.priority = priority;
+	rtRow.trust = 0; // default value for trust (NB! are the advantages if trust would be a signed int)
 
 	rt.ri[rt.items] = rtRow;
 	rt.items++;
 
-	return 0;
-}
+	return rt.items;
+} // ::addRoute (without trust)
+
+/*
+ * add route to routing table, with trust
+ */
+int routeTable::addRoute(string ASID, string ASPATH,
+							unsigned int mask,
+							unsigned int prefixlen,
+							unsigned int nextHop,
+							unsigned int target,
+							int priority,
+							unsigned int trust)
+{
+	routingItem_t rtRow;
+	unsigned int newRouteIndex;
+
+	newRouteIndex = addRoute(ASID, ASPATH, mask,
+			prefixlen, nextHop, target, priority, trust);
+
+	rtRow = rt.ri[newRouteIndex];
+	rtRow.trust = trust;
+
+	return newRouteIndex;
+} // ::addRoute (with trust)
+
 
 /**
  * returns the AS IP address to send the packet to, for the packet that is on route to destination
