@@ -6,6 +6,11 @@
 
 using namespace std;
 
+//let's have in buf size at least 1500 (MTU of 1500 is common)
+#ifndef INCOMING_DATA_BUFFER_SIZE
+#define INCOMING_DATA_BUFFER_SIZE 2000
+#endif
+
 void bgp_listen(char *port)
 {
   /* Setting up struct */
@@ -76,16 +81,21 @@ void bgp_listen(char *port)
     /* ========== END ========== */
 
     /* Receiving message */
-    std::cout << "Waiting to recieve data..."  << std::endl;
-    ssize_t bytes_recieved;
-    char incomming_data_buffer[1000];
-    bytes_recieved = recv(new_sd, incomming_data_buffer,1000, 0);
+    std::cout << "Waiting to receive data..."  << std::endl;
+    ssize_t bytes_received;
+    char incomming_data_buffer[INCOMING_DATA_BUFFER_SIZE];
+    bytes_received = recv(new_sd, incomming_data_buffer,INCOMING_DATA_BUFFER_SIZE, 0);
     // If no data arrives, the program will just wait here until some data arrives.
-    if (bytes_recieved == 0) std::cout << "host shut down." << std::endl ;
-    if (bytes_recieved == -1)std::cout << "recieve error!" << std::endl ;
-std::cout << bytes_recieved << " bytes recieved : ";// << std::endl ;
-    incomming_data_buffer[bytes_recieved] = '\0';
-    std::cout << incomming_data_buffer << std::endl;
+    if (bytes_received == 0) std::cout << "host shut down." << std::endl ;
+    if (bytes_received == -1)std::cout << "receive error!" << std::endl ;
+    std::cout << bytes_received << " bytes received : ";// << std::endl ;
+    if ( bytes_received >= 0 ) {
+        incomming_data_buffer[ bytes_received ] = '\0';
+        std::cout << incomming_data_buffer << std::endl;
+    }
+    else {
+    	std::cout << "### ERROR IN bytes_received" << std::endl;
+    }
 /*JH
  if ( is_valid_IPv4_packet( incomming_data_buffer, bytes_recieved ) )
  switch BGP_type( incomming_data_buffer, bytes_recieved )

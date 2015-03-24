@@ -7,6 +7,11 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 
+//let's have in buf size at least 1500 (MTU of 1500 is common)
+#ifndef INCOMING_DATA_BUFFER_SIZE
+#define INCOMING_DATA_BUFFER_SIZE 2000
+#endif
+
 void bgp_send(char *port, char *msg)
 {
   /* Setting up struct */
@@ -22,14 +27,14 @@ void bgp_send(char *port, char *msg)
 
   std::cout << "Setting up the structs..."  << std::endl;
 
-  host_info.ai_family = AF_UNSPEC;     // IP version not specified. Can be both.
-host_info.ai_family = AF_INET; // we are using IPv4!
+  //host_info.ai_family = AF_UNSPEC;     // IP version not specified. Can be both.
+  host_info.ai_family = AF_INET; // we are using IPv4!
   host_info.ai_socktype = SOCK_STREAM; // Use SOCK_STREAM for TCP or SOCK_DGRAM for UDP.
 
   // Now fill up the linked list of host_info structs with google's address information.
 
-//JH://status = getaddrinfo("localhost", port, &host_info, &host_info_list);
-status = getaddrinfo("127.0.0.1", port, &host_info, &host_info_list);
+  //JH://status = getaddrinfo("localhost", port, &host_info, &host_info_list);
+  status = getaddrinfo("127.0.0.1", port, &host_info, &host_info_list); // we have no DNS
 
   // getaddrinfo returns 0 on succes, or some other value when an error occured.
   // (translated into human readable text by the gai_gai_strerror function).
@@ -62,21 +67,21 @@ serv_addr.sin_family = AF_INET;
 serv_addr.sin_addr.s_addr = INADDR_ANY;
 serv_addr.sin_port = htons(portno);
 */
-// cf. http://www.linuxhowtos.org/C_C++/socket.htm
-do
-{
-std::cout << "Connect()ing... to sockedfd:"  << socketfd << std::endl;
-    status = connect(socketfd, host_info_list->ai_addr, host_info_list->ai_addrlen);
-    // If the connection can not be established, retry in 2 seconds
-    if (status == -1) {
-	// what is ai_addr ... printf(" >%i(%s)< ", host_info_list->ai_addr, inet_ntoa(127*8*8*8+0+0+1) ); // 0x600080aa0);
-      std::cout << "connect error (to: ai_addr=" <<  host_info_list->ai_addr << ") " << "status:" << status << "! ";
-//      close(socketfd);
-//      freeaddrinfo(host_info_list);
-//      return;
-sleep(2);
-    }
-} while ( status < 0 );
+	// cf. http://www.linuxhowtos.org/C_C++/socket.htm
+	do
+	{
+		std::cout << "Connect()ing... to sockedfd:"  << socketfd << std::endl;
+		status = connect(socketfd, host_info_list->ai_addr, host_info_list->ai_addrlen);
+		// If the connection can not be established, retry in 2 seconds
+		if (status == -1) {
+			// what is ai_addr ... printf(" >%i(%s)< ", host_info_list->ai_addr, inet_ntoa(127*8*8*8+0+0+1) ); // 0x600080aa0);
+			std::cout << "connect error (to: ai_addr=" <<  host_info_list->ai_addr << ") " << "status:" << status << "! ";
+			//      close(socketfd);
+			//      freeaddrinfo(host_info_list);
+			//      return;
+			sleep(2);
+		}
+	} while ( status < 0 );
 
     /* ========== END ========== */
 
@@ -93,12 +98,12 @@ sleep(2);
     /* Receiving message */
     std::cout << "Waiting to recieve data..."  << std::endl;
     ssize_t bytes_recieved;
-    char incoming_data_buffer[1000];
-    bytes_recieved = recv(socketfd, incoming_data_buffer,1000, 0);
+    char incoming_data_buffer[ INCOMING_DATA_BUFFER_SIZE ];
+    bytes_recieved = recv(socketfd, incoming_data_buffer,INCOMING_DATA_BUFFER_SIZE, 0);
     // If no data arrives, the program will just wait here until some data arrives.
     if (bytes_recieved == 0) std::cout << "host shut down." << std::endl ;
-    if (bytes_recieved == -1)std::cout << "recieve error!" << std::endl ;
-    std::cout << bytes_recieved << " bytes recieved :" << std::endl ;
+    if (bytes_recieved == -1)std::cout << "receive error!" << std::endl ;
+    std::cout << bytes_recieved << " bytes received :" << std::endl ;
     std::cout << incoming_data_buffer << std::endl;
     /* ========== END ========== */
 
