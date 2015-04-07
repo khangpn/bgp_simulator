@@ -114,7 +114,7 @@ int routeTable::addRoute(string ASID, string ASPATH,
 	unsigned int newRouteIndex;
 
 	newRouteIndex = addRoute(ASID, ASPATH, mask,
-			prefixlen, nextHop, target, priority, trust);
+			prefixlen, nextHop, target, priority);
 
 	rtRow = rt.ri[newRouteIndex];
 	rtRow.trust = trust;
