@@ -37,7 +37,7 @@ struct routingItem_t
 	unsigned int mask; // mask generated with prefixlen
 	unsigned int prefixlen; // IP/prefixlen, the effective bits in src
 	string ASPATH; // for informative purposes or advanced routing decisions
-	string ASID; // \to-do { should this be ASNAME as more descriptive convention }
+	string ASNAME; // \to-do { should this be ASNAME as more descriptive convention }
 	int priority; // pri 0 for default route, all other routest pri at least 1
 	unsigned int trust;
 
@@ -60,9 +60,11 @@ routeTable() {
 
 ~routeTable(){};// Destructor
 
-int addRoute(string ASID, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority);
-int addRoute(string ASID, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority,
+int addRoute(string ASNAME, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority);
+int addRoute(string ASNAME, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority,
 			unsigned int trust);
+int queryNextHop(string destinationASNAME);
+string queryASPATH(int destinationIP);
 int queryRoute(int destination);
 int deleteRoute();
 int routeCount();
@@ -76,7 +78,7 @@ int routeCount();
 /*
  *
  */
-int routeTable::addRoute(string ASID, string ASPATH,
+int routeTable::addRoute(string ASNAME, string ASPATH,
 							unsigned int mask,
 							unsigned int prefixlen,
 							unsigned int nextHop,
@@ -102,7 +104,7 @@ int routeTable::addRoute(string ASID, string ASPATH,
 /*
  * add route to routing table, with trust
  */
-int routeTable::addRoute(string ASID, string ASPATH,
+int routeTable::addRoute(string ASNAME, string ASPATH,
 							unsigned int mask,
 							unsigned int prefixlen,
 							unsigned int nextHop,
@@ -113,7 +115,7 @@ int routeTable::addRoute(string ASID, string ASPATH,
 	routingItem_t rtRow;
 	unsigned int newRouteIndex;
 
-	newRouteIndex = addRoute(ASID, ASPATH, mask,
+	newRouteIndex = addRoute(ASNAME, ASPATH, mask,
 			prefixlen, nextHop, target, priority);
 
 	rtRow = rt.ri[newRouteIndex];
@@ -121,6 +123,51 @@ int routeTable::addRoute(string ASID, string ASPATH,
 
 	return newRouteIndex;
 } // ::addRoute (with trust)
+
+
+/**
+ *
+ * @name    queryNextHop
+ * @brief  	What is the next hop IP address for given ASNAME
+ * @ingroup routeTable
+ *
+ * Finds the next hop for given ASNAME, even when the given ASNAME is not in the neighbours.
+ * It must search thorough the router tables items ASNAMEs.
+ *
+ * @param [in] (string destinationASNAME) target ASNAME as string
+ *
+ * @retval int Returns IP address (IPv4 address) in int format
+ *
+ * TO-DO: actual implementation - now only "dummy" implementation, now gives the first item in routing table for testing purposes
+ */
+int routeTable::queryNextHop(string destinationASNAME)
+{
+	return rt.ri[0].nextHop;
+}
+
+/**
+ *
+ * @name    queryASPATH
+ * @brief  	What is the ASPATH for given neighbor IP address
+ * @ingroup routeTable
+ *
+ * What is the ASPATH for given neighbor IP address
+ *
+ * @param [in] (int destinationIP) target router IP address in int format
+ *
+ * @retval string Returns ASPATH for given neighbour router, or NULL if there is a problem deciding the ASPATH
+ *
+ * TO-DO: actual implementation - now only "dummy" implementation, now gives the first item ASPATH in routing table for testing purposes
+ */
+string routeTable::queryASPATH(int destinationIP)
+{
+	if ( rt.items > 0)
+		return rt.ri[0].ASPATH; // initially just sent any valid ASNAME from the RT
+	else
+	{
+		return NULL;
+	}
+}
 
 
 /**
@@ -144,7 +191,7 @@ int routeTable::queryRoute(int destination)
 		printf("route item: %i, pri:%i: ", ri, rtRow.priority);
 		if ( rtRow.priority == 1 )
 		{
-			cout << ri << ": " << "pri1=|" << rtRow.ASID << "| ";
+			cout << ri << ": " << "pri1=|" << rtRow.ASNAME << "| ";
 			resultDst = rtRow.nextHop;
 		}
 
@@ -175,7 +222,7 @@ int routeTable::queryRoute(int destination)
 } // ::queryRoute
 
 /**
- * @name    route count
+ * @name    routeCount
  * @brief   How many routes in routing table
  * @ingroup routetable
  *
