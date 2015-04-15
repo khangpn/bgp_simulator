@@ -18,54 +18,53 @@ using namespace std;
 
 void bgp_send(char *port, char *message);
 void bgp_listen(char *port);
-void setup_listener();
-map<string, string> setup_neighbours();
 
-int main()
-{
+class As {
+  int port;
+  string name;
   map<string, string> neighbours;
+  string as_config, neighbours_config;
+  public:
+    As(int, string);
+    As(string, string);
+    map<string, string> setup_neighbours();
+    void setup_listener();
+    void set_as_config(string);
+    void set_neighbours_config(string);
+    void run();
+    int getPort() { return port; }
+    string getName() { return name; }
+};
 
-  cout << ">>> Setting up AS..." << endl;
-  thread thread1(setup_listener);
-  thread1.detach();
-
-  cout << ">>> Setting up neighbours..." << endl;
-  neighbours = setup_neighbours();
-
-  // SAMPLE: Send a message to all neighbour every 5s
-  while(true) {
-    for (map<string, string>::iterator it=neighbours.begin(); it!=neighbours.end(); ++it) {
-      //cout << it->first << " " << it->second << endl;
-      // Convert string to char[]
-      char port[10];
-      strcpy(port, it->second.c_str());
-
-      char msg[] = "Hello ";
-      strcat(msg, port);
-      bgp_send(port, msg);
-    } // for
-    cout << ">>> Message sent" << endl;
-//sleep(5);
-cout << endl;
-sleep(15);
-  } // while
-  // end of SAMPLE
-
-  return 0;
+As::As (int p, string n) {
+  port = p;
+  name = n;
 }
 
-map<string, string> setup_neighbours()
+As::As (string as_config, string neighbours_config) {
+  As::as_config = as_config;
+  As::neighbours_config = neighbours_config;
+}
+
+void As::set_as_config(string config) {
+  As::neighbours_config = config;
+}
+
+void As::set_neighbours_config(string config) {
+  As::as_config = config;
+}
+
+map<string, string> As::setup_neighbours()
 {
-  map<string, string> neighbours;
   /* Setup AS links */
   // Read configuration file
   string line;
   ifstream links_file;
   ifstream config_file;
-  config_file.open( SETUP_NEIGHBOUR_FILENAME );
+  config_file.open( neighbours_config );
   if ( !config_file.is_open() ) {
 	  fprintf(stderr, "### error in opening file: ");
-	  fprintf(stderr, SETUP_NEIGHBOUR_FILENAME);
+	  fprintf(stderr, "%s", neighbours_config.c_str());
 	  fprintf(stderr, "\n");
   }
   else {
@@ -85,13 +84,13 @@ map<string, string> setup_neighbours()
 
 }
 
-void setup_listener()
+void As::setup_listener()
 {
   /* Setup AS server */
   // Read configuration file
   string port;
   ifstream config_file;
-  config_file.open( SETUP_CONFIG_FILENAME );
+  config_file.open( as_config );
   if ( config_file.is_open() ) {
 	  getline(config_file, port);
 	  config_file.close();
@@ -110,7 +109,42 @@ void setup_listener()
 	  config_file.close();
   }
   else { // config file cannot be opened
-	  fprintf(stderr, "### Config file %s open error", SETUP_CONFIG_FILENAME);
+	  fprintf(stderr, "### Config file %s open error", as_config.c_str());
   }
     /* ========== END ========== */
+}
+
+void As::run() 
+{
+  cout << ">>> Setting up AS..." << endl;
+  thread thread1(&As::setup_listener, this);
+  thread1.detach();
+
+  cout << ">>> Setting up neighbours..." << endl;
+  neighbours = setup_neighbours(); // NOTE: this should be put in a thread later
+
+  // SAMPLE: Send a message to all neighbour every 5s
+  while(true) {
+    for (map<string, string>::iterator it=neighbours.begin(); it!=neighbours.end(); ++it) {
+      //cout << it->first << " " << it->second << endl;
+      // Convert string to char[]
+      char port[10];
+      strcpy(port, it->second.c_str());
+
+      char msg[] = "Hello ";
+      strcat(msg, port);
+      bgp_send(port, msg);
+    } // for
+    cout << ">>> Message sent" << endl;
+    cout << endl;
+    sleep(15);
+  } // while
+  // end of SAMPLE
+}
+
+int main()
+{
+  As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME );
+  as.run();
+  return 0;
 }
