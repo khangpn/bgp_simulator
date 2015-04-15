@@ -25,10 +25,45 @@
 
 using namespace std;
 
+// for inet_pton-related usage examples...
+#include <sys/types.h>
+
+//...
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+int IPaddress2int(const char *IPaddress)
+{
+	int IPint = 0;
+	inet_pton(AF_INET, IPaddress, &IPint ); // &(sa.sin_addr));
+	return IPint;
+
+	//printf("%s\n", str); // prints "192.0.2.33"
+} // IPaddress2int
+
+void printIPint(int IPint) // TO-DO! memory allocation in C sucks
+{
+	struct sockaddr_in sa;
+	//char str[INET_ADDRSTRLEN]; http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#inet_ntopman
+	char str[16];
+
+	// now get it back and print it
+	inet_ntop(AF_INET, &(sa.sin_addr), str, 16);
+
+	printf("%s\n", str); // prints "192.0.2.33"
+} // printIPint
+
+
+
 class routeTable
 {
 // currently hard-coded limit for 1000 routes, I will implement dynamic allocation using e.g. <vector>
+
 #define RMAX 1000
+
+#ifndef VERBOSE
+#define VERBOSE 3
+#endif
 
 struct routingItem_t
 {
@@ -178,7 +213,8 @@ int routeTable::queryRoute(int destination)
 {
 	// \to-do { can we be sure there is no thread conflict that changes e.g. rt.items }
 	int ri;
-	int resultDst = -1;
+	int resultDst = -1; // used for result destination IP
+	int resultPri = -9999999; // used for deciding the result // TO-DO: better lowest possible
 	// iterate rt
 	//printf("route items: %i\n", rt.items);
 	routingItem_t rtRow; // to be used in iterations and comparisons
@@ -188,37 +224,53 @@ int routeTable::queryRoute(int destination)
 	for (ri = 0; ri < rt.items; ri++)
 	{
 		rtRow = rt.ri[ri];
-		printf("route item: %i, pri:%i: ", ri, rtRow.priority);
+		/*
+		if (VERBOSE>2) printf("V3: route item: %i, pri:%i: ", ri, rtRow.priority);
 		if ( rtRow.priority == 1 )
 		{
-			cout << ri << ": " << "pri1=|" << rtRow.ASNAME << "| ";
+			if (VERBOSE>3) cout << "V3: " << ri << ": " << "pri1=|" << rtRow.ASNAME << "| ";
 			resultDst = rtRow.nextHop;
 		}
+		*/
 
 		// calculate if match found for destination in route table entries
 
 		if ( ( rtRow.mask & rtRow.target ) == ( rtRow.mask & destination ) )
 		{
-			printf("matchA1! prefixlen:%i\n", rtRow.prefixlen);
-			resultDst = rtRow.nextHop;
+			if (VERBOSE>2) printf("V3: matchA1! prefixlen:%i\n", rtRow.prefixlen);
+			if ( resultPri < rtRow.priority )
+			{
+				if (VERBOSE>3) printf("V4: matchA1! pri old -> new: %i %i\n", resultPri, rtRow.priority);
+				resultDst = rtRow.nextHop;
+				resultPri = rtRow.priority;
+			}
 		}
 
 		// alternative / better / wrong way to compute match?!:
 		if ( ( rtRow.target >> rtRow.prefixlen ) == ( destination >> rtRow.prefixlen ) )
 		{
-			printf("matchA2! prefixlen:%i\n", rtRow.prefixlen);
-			resultDst = rtRow.nextHop;
+			if (VERBOSE>2) printf("V3: matchA2! prefixlen:%i\n", rtRow.prefixlen);
+			if ( resultPri < rtRow.priority )
+			{
+				if (VERBOSE>3) printf("V4: matchA2! pri old -> new: %i %i\n", resultPri, rtRow.priority);
+				resultDst = rtRow.nextHop;
+				resultPri = rtRow.priority;
+			}
 		}
 		cout << endl;
-	}
+	} // if
 
+	// if some destination was determined by the routing table, return it:
 	if ( resultDst > -1 )
 		return resultDst;
-
-	if ( rt.items > 0)
-		return rt.ri[0].nextHop; // initially just sent any valid AS IP from the RT
 	else
-		return -1;
+	{
+		// if no match could be found, return something, if possible:
+		if ( rt.items > 0)
+			return rt.ri[0].nextHop; // in case of trouble, return some valid AS IP from the RT
+		else
+			return 0; // if all fails, send "0" -- TO-DO: some error code should be emitted
+	}
 } // ::queryRoute
 
 /**
