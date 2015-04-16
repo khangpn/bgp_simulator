@@ -25,25 +25,23 @@ class As {
   map<string, string> neighbours;
   string as_config, neighbours_config;
   public:
-    As(int, string);
     As(string, string);
     map<string, string> setup_neighbours();
     void setup_listener();
     void set_as_config(string);
     void set_neighbours_config(string);
-    void run();
+    void keep_alive();
     int getPort() { return port; }
     string getName() { return name; }
 };
 
-As::As (int p, string n) {
-  port = p;
-  name = n;
-}
-
 As::As (string as_config, string neighbours_config) {
   As::as_config = as_config;
   As::neighbours_config = neighbours_config;
+
+  cout << ">>> Setting up neighbours..." << endl;
+  neighbours = setup_neighbours();
+
 }
 
 void As::set_as_config(string config) {
@@ -59,7 +57,6 @@ map<string, string> As::setup_neighbours()
   /* Setup AS links */
   // Read configuration file
   string line;
-  ifstream links_file;
   ifstream config_file;
   config_file.open( neighbours_config );
   if ( !config_file.is_open() ) {
@@ -114,14 +111,11 @@ void As::setup_listener()
     /* ========== END ========== */
 }
 
-void As::run() 
+void As::keep_alive() 
 {
-  cout << ">>> Setting up AS..." << endl;
-  thread thread1(&As::setup_listener, this);
-  thread1.detach();
-
-  cout << ">>> Setting up neighbours..." << endl;
-  neighbours = setup_neighbours(); // NOTE: this should be put in a thread later
+  //cout << ">>> Setting up AS..." << endl;
+  //thread thread1(&As::setup_listener, this);
+  //thread1.detach();
 
   // SAMPLE: Send a message to all neighbour every 5s
   while(true) {
@@ -145,6 +139,11 @@ void As::run()
 int main()
 {
   As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME );
-  as.run();
+
+  cout << ">>> Setting up AS..." << endl;
+  thread thread1(&As::setup_listener, as);
+  thread1.detach();
+
+  as.keep_alive();
   return 0;
 }
