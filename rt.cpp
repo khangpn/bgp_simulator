@@ -22,6 +22,7 @@
 #include <sstream> // for std::stringstream
 #include <map> // for std::map
 #include <stdlib.h> // for std::sleep
+#include <stdio.h>// for Jussi's sprintf temporary quick fix conversions
 
 using namespace std;
 
@@ -102,6 +103,7 @@ void printTableASPATH(string separator);
 void printTableASPATH();
 int ASPATHlength(string ASPATH);
 int queryNextHop(string destinationASNAME);
+int queryNextHop(int destinationASNAME);
 string queryASPATH(int destinationIP);
 int queryRoute(int destination);
 int deleteRoute();
@@ -302,6 +304,20 @@ int routeTable::queryNextHop(string destinationASNAME)
 	// return rtRowBest.ASNAME;
 	return i;
 }
+
+// convert paramater to string and call queryNextHop with that string
+int routeTable::queryNextHop(int destinationASNAME)
+{
+	string s;
+	char temp[6];
+	//s = itos( rtRowBest.ASNAME.c_str() );// why not working?
+	s = "" + destinationASNAME;
+	// itoa(destinationASNAME, temp, 10); // oh this rquires stdlib.h?
+	sprintf(temp, "%i", destinationASNAME); // this to, but is standard #include <stdio.h>
+	s = temp;
+	return queryNextHop( s );
+} // ::queryNextHop(int)
+
 
 /**
  *
