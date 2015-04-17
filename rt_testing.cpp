@@ -72,6 +72,7 @@ int main(void)
 	printf("ASPATHlength testing: %s, %i (%i)\n", ASPATHtestString.c_str(), myRouteTable.ASPATHlength(ASPATHtestString), (ASPATHtestResult==myRouteTable.ASPATHlength(ASPATHtestString)) );
 
 	// routeDelete:
+	// not yet
 
 	return 0;
 }
