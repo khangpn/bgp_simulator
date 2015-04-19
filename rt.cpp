@@ -22,13 +22,49 @@
 #include <sstream> // for std::stringstream
 #include <map> // for std::map
 #include <stdlib.h> // for std::sleep
+#include <stdio.h>// for Jussi's sprintf temporary quick fix conversions
 
 using namespace std;
+
+// for inet_pton-related usage examples...
+#include <sys/types.h>
+
+//... ...
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+int IPaddress2int(const char *IPaddress)
+{
+	int IPint = 0;
+	inet_pton(AF_INET, IPaddress, &IPint ); // &(sa.sin_addr));
+	return IPint;
+
+	//printf("%s\n", str); // prints "192.0.2.33"
+} // IPaddress2int
+
+void printIPint(int IPint) // TO-DO! memory allocation in C sucks
+{
+	struct sockaddr_in sa;
+	//char str[INET_ADDRSTRLEN]; http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#inet_ntopman
+	char str[16];
+
+	// now get it back and print it
+	inet_ntop(AF_INET, &(sa.sin_addr), str, 16);
+
+	printf("%s\n", str); // prints "192.0.2.33"
+} // printIPint
+
+
 
 class routeTable
 {
 // currently hard-coded limit for 1000 routes, I will implement dynamic allocation using e.g. <vector>
+
 #define RMAX 1000
+
+#ifndef VERBOSE
+#define VERBOSE 3
+#endif
 
 struct routingItem_t
 {
@@ -63,7 +99,11 @@ routeTable() {
 int addRoute(string ASNAME, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority);
 int addRoute(string ASNAME, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority,
 			unsigned int trust);
+void printTableASPATH(string separator);
+void printTableASPATH();
+int ASPATHlength(string ASPATH);
 int queryNextHop(string destinationASNAME);
+int queryNextHop(int destinationASNAME);
 string queryASPATH(int destinationIP);
 int queryRoute(int destination);
 int deleteRoute();
@@ -81,12 +121,13 @@ int routeCount();
 int routeTable::addRoute(string ASNAME, string ASPATH,
 							unsigned int mask,
 							unsigned int prefixlen,
-							unsigned int nextHop,
-							unsigned int target,
+							unsigned int nextHop, // IP of nexthop
+							unsigned int target,  // IP of target (destination) packet
 							int priority)
 {
 	routingItem_t rtRow;
 
+	rtRow.ASNAME = ASNAME;
 	rtRow.ASPATH = ASPATH;
 	rtRow.mask = mask;
 	rtRow.prefixlen = prefixlen;
@@ -124,6 +165,63 @@ int routeTable::addRoute(string ASNAME, string ASPATH,
 	return newRouteIndex;
 } // ::addRoute (with trust)
 
+/**
+ *
+ * @name    printTableASPATH
+ * @brief  	Ouput routing table, with each line: ASNAME ASPATH PRIORITY
+ * @ingroup routeTable
+ *
+ * It must search thorough the router table's items.
+ *
+ * @param [in] string separator value to be used in between the outputted items
+ *
+ * @retval no return value
+ *
+ */
+void routeTable::printTableASPATH( string separator )
+{
+	int ri;
+	routingItem_t rtRow; // to be used in iterations and comparisons
+	//string separator = "\t";
+	string paddedASPATH;
+
+	for (ri = 0; ri < rt.items; ri++)
+	{
+		rtRow = rt.ri[ri];
+		cout << rtRow.ASNAME << separator << rtRow.priority << separator << rtRow.ASPATH << endl;
+	}
+} // ::printTableASPATH
+
+void routeTable::printTableASPATH()
+{
+	printTableASPATH("\t");
+}
+
+/**
+ *
+ * @name    ASPATHlength
+ * @brief  	Calculate the length of given ASPATH, return is integer
+ * @ingroup routeTable
+ *
+ * Finds the next hop for given ASNAME, even when the given ASNAME is not in the neighbours.
+ * It must search thorough the router tables items ASNAMEs.
+ *
+ * @param [in] (string ASPATH) ASPATH to be evaluated, as string
+ *
+ * @retval int Returns the number of ASes listed in ASPATH
+ *
+ * TO-DO: this should be a method of a routing table entry (routing table entries should be objects)
+ */
+int routeTable::ASPATHlength(string ASPATH)
+{
+	int wordCount = 1;
+	if ( ASPATH.empty() )
+		return 0;
+	for (int i=0; i<ASPATH.length(); i++)
+		if ( ASPATH[i]==' ' )
+			wordCount++;
+	return wordCount;
+} // ::ASPATHlenth
 
 /**
  *
@@ -138,12 +236,88 @@ int routeTable::addRoute(string ASNAME, string ASPATH,
  *
  * @retval int Returns IP address (IPv4 address) in int format
  *
- * TO-DO: actual implementation - now only "dummy" implementation, now gives the first item in routing table for testing purposes
  */
 int routeTable::queryNextHop(string destinationASNAME)
 {
-	return rt.ri[0].nextHop;
+	int ri;
+	int resultDst = 0; // used for result destination IP, init with 0
+	int resultPri = -9999999; // used for deciding the result // TO-DO: better lowest possible
+	int resultLen =  9999999; // the length of the result NextHop's ASPATH (TO-DO MAXINT)
+	// iterate rt
+	//printf("route items: %i\n", rt.items);
+	routingItem_t rtRow; // to be used in iterations and comparisons
+	routingItem_t rtRowBest; // Best match saved here
+	int match_found = 0; // indicates if match is already found or not \to-do { match_found could be avoided if rtRowBest is null until first match is found}++
+
+	string paddedASPATH;
+	string paddedDestinationASNAME;
+	paddedDestinationASNAME = " " + destinationASNAME + " ";
+
+	for (ri = 0; ri < rt.items; ri++)
+	{
+		rtRow = rt.ri[ri];
+
+		// calculate if match found for destination in route table entries ASPATH
+
+		// simple implementation (TO-DO: make this wicked fast)
+		paddedASPATH = " " + rtRow.ASPATH + " "; // passedASPATH is now ASPATH with extra spaces
+
+		if ( paddedASPATH.find( paddedDestinationASNAME ) != std::string::npos ) //search ASPATH with space as separator
+		{
+			// matching AS in the ASPATH is found!
+
+			// is the new match better than existing
+
+			// test2: is the new match ASPATH configured with bigger priority
+			// TO-DO: priority is possible to set only for router table line (= per neighbour), not for each AS separately
+			if (VERBOSE>2) printf("V3: ASPATH match ASPATH:%s\n", rtRow.ASPATH.c_str());
+			if (VERBOSE>3) cout << "V4: MATCHING POSITION:"
+					<< paddedASPATH.find( paddedDestinationASNAME )
+					<< endl;
+			if ( resultPri < rtRow.priority )
+			{
+				if (VERBOSE>3) printf("V4: ASPATH test2 match! pri old -> new: %i %i, ASPATH:%s\n", resultPri, rtRow.priority, rtRow.ASPATH.c_str());
+				resultDst = rtRow.nextHop;
+				resultPri = rtRow.priority;
+				resultLen = ASPATHlength ( rtRow.ASPATH );
+				rtRowBest = rtRow; // TO-DO: use this, not result*, NB! copy vs. pointer
+			}
+			else
+				// test1: is the new match ASPATH length smaller
+				if ( resultLen > ASPATHlength( rtRow.ASPATH ) )
+				{
+					if (VERBOSE>3) printf("V4: ASPATH test1 match! len old -> new: %i %i, ASPATH:%s\n", resultLen, ASPATHlength( rtRow.ASPATH ),rtRow.ASPATH.c_str() );
+					resultDst = rtRow.nextHop;
+					resultPri = rtRow.priority;
+					resultLen = ASPATHlength( rtRow.ASPATH );
+					rtRowBest = rtRow; // TO-DO: use this, not result*, NB! copy vs. pointer
+				}
+		}
+	}
+
+	//return resultDst;
+	//std::string::size_type st;
+	string s;
+	int i;
+	//i = stoi( rtRowBest.ASNAME, nullptr, 10 ); // why not working: http://www.cplusplus.com/reference/string/stoi/
+	i = atoi( rtRowBest.ASNAME.c_str() );
+	// return rtRowBest.ASNAME;
+	return i;
 }
+
+// convert paramater to string and call queryNextHop with that string
+int routeTable::queryNextHop(int destinationASNAME)
+{
+	string s;
+	char temp[6];
+	//s = itos( rtRowBest.ASNAME.c_str() );// why not working?
+	s = "" + destinationASNAME;
+	// itoa(destinationASNAME, temp, 10); // oh this rquires stdlib.h?
+	sprintf(temp, "%i", destinationASNAME); // this to, but is standard #include <stdio.h>
+	s = temp;
+	return queryNextHop( s );
+} // ::queryNextHop(int)
+
 
 /**
  *
@@ -178,7 +352,8 @@ int routeTable::queryRoute(int destination)
 {
 	// \to-do { can we be sure there is no thread conflict that changes e.g. rt.items }
 	int ri;
-	int resultDst = -1;
+	int resultDst = -1; // used for result destination IP
+	int resultPri = -9999999; // used for deciding the result // TO-DO: better lowest possible
 	// iterate rt
 	//printf("route items: %i\n", rt.items);
 	routingItem_t rtRow; // to be used in iterations and comparisons
@@ -188,37 +363,47 @@ int routeTable::queryRoute(int destination)
 	for (ri = 0; ri < rt.items; ri++)
 	{
 		rtRow = rt.ri[ri];
-		printf("route item: %i, pri:%i: ", ri, rtRow.priority);
-		if ( rtRow.priority == 1 )
-		{
-			cout << ri << ": " << "pri1=|" << rtRow.ASNAME << "| ";
-			resultDst = rtRow.nextHop;
-		}
 
 		// calculate if match found for destination in route table entries
 
 		if ( ( rtRow.mask & rtRow.target ) == ( rtRow.mask & destination ) )
 		{
-			printf("matchA1! prefixlen:%i\n", rtRow.prefixlen);
-			resultDst = rtRow.nextHop;
+			if (VERBOSE>2) printf("V3: matchA1! prefixlen:%i\n", rtRow.prefixlen);
+			if ( resultPri < rtRow.priority )
+			{
+				if (VERBOSE>3) printf("V4: matchA1! pri old -> new: %i %i\n", resultPri, rtRow.priority);
+				resultDst = rtRow.nextHop;
+				resultPri = rtRow.priority;
+			}
+			match_found++;
 		}
 
 		// alternative / better / wrong way to compute match?!:
 		if ( ( rtRow.target >> rtRow.prefixlen ) == ( destination >> rtRow.prefixlen ) )
 		{
-			printf("matchA2! prefixlen:%i\n", rtRow.prefixlen);
-			resultDst = rtRow.nextHop;
+			if (VERBOSE>2) printf("V3: matchA2! prefixlen:%i\n", rtRow.prefixlen);
+			if ( resultPri < rtRow.priority )
+			{
+				if (VERBOSE>3) printf("V4: matchA2! pri old -> new: %i %i\n", resultPri, rtRow.priority);
+				resultDst = rtRow.nextHop;
+				resultPri = rtRow.priority;
+			}
+			// match_found++; // do not count matches twice!
 		}
 		cout << endl;
-	}
+	} // if
 
-	if ( resultDst > -1 )
+	// if some destination was determined by the routing table, return it:
+	if ( match_found > 0 )
 		return resultDst;
-
-	if ( rt.items > 0)
-		return rt.ri[0].nextHop; // initially just sent any valid AS IP from the RT
 	else
-		return -1;
+	{
+		// if no match could be found, return something, if possible:
+		if ( rt.items > 0)
+			return rt.ri[0].nextHop; // in case of trouble, return some valid AS IP from the RT
+		else
+			return 0; // if all fails, send "0" -- TO-DO: some error code should be emitted
+	}
 } // ::queryRoute
 
 /**
