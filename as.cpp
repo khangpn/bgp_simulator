@@ -9,10 +9,12 @@
 #include <sstream> // for std::stringstream
 #include <map> // for std::map
 #include <stdlib.h> // for std::sleep
+#include "as_bgp_listen.cpp"
+#include "as_bgp_send.cpp"
 
 #define SETUP_CONFIG_FILENAME "as_configs"
 #define SETUP_NEIGHBOUR_FILENAME "neighbours.csv"
-
+#define PACKET_LENGTH 1500
 
 using namespace std;
 
@@ -24,6 +26,33 @@ class As {
   string name;
   map<string, string> neighbours;
   string as_config, neighbours_config;
+
+  unsigned char * serialize_int(unsigned char *buffer, int value);
+  unsigned char * serialize_char(unsigned char *buffer, char value);
+
+  struct header {
+    unsigned char marker [16];
+    unsigned char length = 19; //This should be 2 octets. Let's assume it 1octet atm.
+    /*
+      message types:
+      1 - OPEN
+      2 - UPDATE
+      3 - NOTIFICATION
+      4 - KEEPALIVE
+    */
+    unsigned char type;
+  } header;
+  unsigned char * serialize_header(unsigned char * buffer, struct header *value);
+
+  struct open {
+    unsigned char version [16];
+    unsigned char my_as;
+    unsigned char holdtime = 0; //Should be 2 octets
+    unsigned char bgp_identifier [4];
+    //Atm, let's ignore optional parameters
+  } open;
+  unsigned char * serialize_OPEN(unsigned char * buffer, struct open *value);
+
   public:
     As(string, string);
     map<string, string> setup_neighbours();
@@ -33,6 +62,11 @@ class As {
     void keep_alive();
     int getPort() { return port; }
     string getName() { return name; }
+    unsigned char * generate_header(unsigned char type);
+    unsigned char * generate_OPEN();
+    unsigned char * generate_UPDATE();
+    unsigned char * generate_NOTIFICATION();
+    unsigned char * generate_KEEPALIVE();
 };
 
 As::As (string as_config, string neighbours_config) {
@@ -136,14 +170,57 @@ void As::keep_alive()
   // end of SAMPLE
 }
 
+unsigned char * As::generate_header(unsigned char type) {
+  std::fill_n(header.marker, 16, '1');
+  header.length = 19;
+  header.type = type;
+
+  unsigned char buffer[19], *ptr;
+  ptr = serialize_header( buffer, &header );
+  cout << "Printing out result" << endl;
+  cout << buffer << endl;
+}
+
+unsigned char * As::serialize_header(unsigned char *buffer, struct header *value)
+{
+  for (int i = 0; i <= sizeof(value->marker) - 1; i++) {
+    buffer = serialize_char(buffer, value->marker[i]);
+  }
+  buffer = serialize_char(buffer, value->length);
+  buffer = serialize_char(buffer, value->type);
+  return buffer;
+}
+
+// NOTE: dont need this at the moment, we consider all components inside struct is char
+unsigned char * As::serialize_int(unsigned char *buffer, int value)
+{
+  /* Write big-endian int value into buffer; assumes 32-bit int and 8-bit char. */
+  buffer[0] = value >> 24;
+  buffer[1] = value >> 16;
+  buffer[2] = value >> 8;
+  buffer[3] = value;
+  return buffer + 4;
+}
+
+unsigned char * As::serialize_char(unsigned char *buffer, char value)
+{
+  buffer[0] = value;
+  return buffer + 1;
+}
+
+unsigned char * As::generate_KEEPALIVE() {
+  return As::generate_header(4);
+} 
+
 int main()
 {
   As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME );
 
-  cout << ">>> Setting up AS..." << endl;
-  thread thread1(&As::setup_listener, as);
-  thread1.detach();
+  //cout << ">>> Setting up AS..." << endl;
+  //thread thread1(&As::setup_listener, as);
+  //thread1.detach();
 
-  as.keep_alive();
+  //as.keep_alive();
+  as.generate_header(4);
   return 0;
 }
