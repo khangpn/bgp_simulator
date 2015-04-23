@@ -83,7 +83,7 @@ void bgp_listen(char *port)
     /* Receiving message */
     std::cout << "Waiting to receive data..."  << std::endl;
     ssize_t bytes_received;
-    char incomming_data_buffer[INCOMING_DATA_BUFFER_SIZE];
+    unsigned char incomming_data_buffer[INCOMING_DATA_BUFFER_SIZE];
     bytes_received = recv(new_sd, incomming_data_buffer,INCOMING_DATA_BUFFER_SIZE, 0);
     // If no data arrives, the program will just wait here until some data arrives.
     if (bytes_received == 0) std::cout << "host shut down." << std::endl ;
@@ -91,7 +91,7 @@ void bgp_listen(char *port)
     std::cout << bytes_received << " bytes received : ";// << std::endl ;
     if ( bytes_received >= 0 ) {
         incomming_data_buffer[ bytes_received ] = '\0';
-        std::cout << incomming_data_buffer << std::endl;
+        //std::cout << incomming_data_buffer << std::endl;
     }
     else {
     	std::cout << "### ERROR IN bytes_received" << std::endl;
@@ -111,7 +111,7 @@ void bgp_listen(char *port)
 
     /* Sending message */
     std::cout << "send()ing message..."  << std::endl;
-    char msg[] = "HELLO CLIENT";
+    char msg[] = "Hi! I got your msg.";
     int len;
     ssize_t bytes_sent;
     len = strlen(msg);

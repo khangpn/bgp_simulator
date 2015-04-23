@@ -30,6 +30,7 @@ class As {
   unsigned char * serialize_int(unsigned char *buffer, int value);
   unsigned char * serialize_char(unsigned char *buffer, char value);
 
+  // Total: 18 octets
   struct header {
     unsigned char marker [16];
     unsigned char length = 19; //This should be 2 octets. Let's assume it 1octet atm.
@@ -159,12 +160,15 @@ void As::keep_alive()
       char port[10];
       strcpy(port, it->second.c_str());
 
-      char msg[] = "Hello ";
-      strcat(msg, port);
-      bgp_send(port, msg);
+      unsigned char *msg = As::generate_KEEPALIVE();
+      //cout << "Msg to sent: " << msg << endl;
+      //for (int i = 0; i <=  18; i++) {
+      //  cout << msg[i] << endl;
+      //}
+      //strcat(msg, port);
+      //bgp_send(port, msg);
     } // for
     cout << ">>> Message sent" << endl;
-    cout << endl;
     sleep(15);
   } // while
   // end of SAMPLE
@@ -172,13 +176,25 @@ void As::keep_alive()
 
 unsigned char * As::generate_header(unsigned char type) {
   std::fill_n(header.marker, 16, '1');
-  header.length = 19;
+  header.length = 18;
   header.type = type;
 
-  unsigned char buffer[19], *ptr;
+  unsigned char buffer[18], *ptr;
   ptr = serialize_header( buffer, &header );
-  cout << "Printing out result" << endl;
+
+  // Comparing ptr and buffer
+  cout << ptr << endl;
   cout << buffer << endl;
+
+  // Just print out what inside buffer
+  for (int i = 0; i <=  17; i++) {
+    if (i >= 16) {
+      cout << (int)buffer[i] << endl;
+    } else {
+      cout << buffer[i] << endl;
+    }
+  }
+  return ptr;
 }
 
 unsigned char * As::serialize_header(unsigned char *buffer, struct header *value)
@@ -192,15 +208,15 @@ unsigned char * As::serialize_header(unsigned char *buffer, struct header *value
 }
 
 // NOTE: dont need this at the moment, we consider all components inside struct is char
-unsigned char * As::serialize_int(unsigned char *buffer, int value)
-{
-  /* Write big-endian int value into buffer; assumes 32-bit int and 8-bit char. */
-  buffer[0] = value >> 24;
-  buffer[1] = value >> 16;
-  buffer[2] = value >> 8;
-  buffer[3] = value;
-  return buffer + 4;
-}
+//unsigned char * As::serialize_int(unsigned char *buffer, int value)
+//{
+//  /* Write big-endian int value into buffer; assumes 32-bit int and 8-bit char. */
+//  buffer[0] = value >> 24;
+//  buffer[1] = value >> 16;
+//  buffer[2] = value >> 8;
+//  buffer[3] = value;
+//  return buffer + 4;
+//}
 
 unsigned char * As::serialize_char(unsigned char *buffer, char value)
 {
@@ -209,7 +225,8 @@ unsigned char * As::serialize_char(unsigned char *buffer, char value)
 }
 
 unsigned char * As::generate_KEEPALIVE() {
-  return As::generate_header(4);
+  unsigned char *msg = As::generate_header(4);
+  return msg;
 } 
 
 int main()
@@ -220,7 +237,6 @@ int main()
   //thread thread1(&As::setup_listener, as);
   //thread1.detach();
 
-  //as.keep_alive();
-  as.generate_header(4);
+  as.keep_alive();
   return 0;
 }
