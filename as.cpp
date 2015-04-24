@@ -174,25 +174,40 @@ void As::keep_alive()
   // end of SAMPLE
 }
 
-unsigned char * As::generate_header(unsigned char type) {
-  std::fill_n(header.marker, 16, '1');
-  header.length = 18;
-  header.type = type;
+/**
+ * Generate BGP message header
+ * @param [in] bgpMessageType (1..4)
+ * @result pointer to header
+ */
+unsigned char * As::generate_header(unsigned char bgpMessageType) {
+  std::fill_n(header.marker, 16, '1'); // make the header "all ones" (is it 255s or 1s)
+  header.length = 18; // 18..4096 are the limits of header length value
+  header.type = (unsigned char)bgpMessageType;
 
-  unsigned char buffer[18], *ptr;
-  ptr = serialize_header( buffer, &header );
+  unsigned char *ptr;
+  // type==4==KEEPALIVE
+  if (bgpMessageType==4)
+  {
+	  unsigned char buffer[18]; // for the memory area to be persistent, malloc(18) must be used
+	  //ptr = serialize_header( buffer, &header ); // but no need to do that here, since the header is OK already!
+	  ptr = (unsigned char *)&header;
+	  // Comparing ptr and buffer
+	  cout << "Comparing ptr and buffer:" << endl;
+	  ptr[18]=0;buffer[18]=0; // to make them printable, there must be zero ending
+	  cout << "ptr=" << ptr << endl;
+	  cout << "buffer=" << buffer << endl;
 
-  // Comparing ptr and buffer
-  cout << ptr << endl;
-  cout << buffer << endl;
-
-  // Just print out what inside buffer
-  for (int i = 0; i <=  17; i++) {
-    if (i >= 16) {
-      cout << (int)buffer[i] << endl;
-    } else {
-      cout << buffer[i] << endl;
-    }
+	  // Just print out what inside buffer
+	  for (int i = 0; i <=  17; i++) {
+	    if (i >= 16) {
+	      cout << (int)buffer[i] << endl;
+	    } else {
+	      cout << buffer[i] << endl;
+	    }
+	  }
+  }
+  else {
+	  ptr = 0;
   }
   return ptr;
 }
@@ -237,6 +252,7 @@ int main()
   //thread thread1(&As::setup_listener, as);
   //thread1.detach();
 
+  as.generate_header(4);
   as.keep_alive();
   return 0;
 }
