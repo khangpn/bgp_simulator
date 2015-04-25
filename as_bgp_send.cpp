@@ -12,7 +12,7 @@
 #define INCOMING_DATA_BUFFER_SIZE 2000
 #endif
 
-void bgp_send(char *port, unsigned char *msg)
+void bgp_send(char *port, unsigned char *msg, const int msg_len)
 {
   /* Setting up struct */
   int status;
@@ -87,13 +87,10 @@ serv_addr.sin_port = htons(portno);
 
     /* Sending message */
     std::cout << "send()ing message to:" << port << "..."  << std::endl;
-    //char msg[1000];
-    //std::cin >> msg;
     int len;
     ssize_t bytes_sent;
-    len = sizeof(msg);
-    //std::cout << msg << std::endl;
-    bytes_sent = send(socketfd, msg, len, 0);
+    //len = sizeof(msg);
+    bytes_sent = send(socketfd, msg, msg_len, 0);
     /* ========== END ========== */
 
     /* Receiving message */

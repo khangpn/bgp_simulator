@@ -26,9 +26,10 @@ class As {
   string name;
   map<string, string> neighbours;
   string as_config, neighbours_config;
+  const int HEADER_LENGTH = 18;
 
   unsigned char * serialize_int(unsigned char *buffer, int value);
-  unsigned char * serialize_char(unsigned char *buffer, char value);
+  unsigned char * serialize_char(unsigned char *buffer, char value, int *size);
 
   // Total: 18 octets
   struct header {
@@ -43,7 +44,7 @@ class As {
     */
     unsigned char type;
   } header;
-  unsigned char * serialize_header(unsigned char * buffer, struct header *value);
+  unsigned char * serialize_header(unsigned char * buffer, struct header *value, int *size);
 
   struct open {
     unsigned char version [16];
@@ -52,7 +53,7 @@ class As {
     unsigned char bgp_identifier [4];
     //Atm, let's ignore optional parameters
   } open;
-  unsigned char * serialize_OPEN(unsigned char * buffer, struct open *value);
+  unsigned char * serialize_OPEN(unsigned char * buffer, struct open *value, int *size);
 
   public:
     As(string, string);
@@ -63,11 +64,11 @@ class As {
     void keep_alive();
     int getPort() { return port; }
     string getName() { return name; }
-    unsigned char * generate_header(unsigned char type);
-    unsigned char * generate_OPEN();
-    unsigned char * generate_UPDATE();
-    unsigned char * generate_NOTIFICATION();
-    unsigned char * generate_KEEPALIVE();
+    unsigned char * generate_header(unsigned char type, int *size);
+    unsigned char * generate_OPEN(int *size);
+    unsigned char * generate_UPDATE(int *size);
+    unsigned char * generate_NOTIFICATION(int *size);
+    unsigned char * generate_KEEPALIVE(int *size);
 };
 
 As::As (string as_config, string neighbours_config) {
@@ -160,66 +161,58 @@ void As::keep_alive()
       char port[10];
       strcpy(port, it->second.c_str());
 
-      unsigned char *msg = As::generate_KEEPALIVE();
-      //cout << "Msg to sent: " << msg << endl;
-      //for (int i = 0; i <=  18; i++) {
-      //  cout << msg[i] << endl;
+      int size = 0;
+      unsigned char *msg = As::generate_KEEPALIVE(&size);
+
+      // NOTE: if print out things here, the pointer will point to wrong mem
+      //cout << "Msg to send: " << (int)msg[16] << endl;
+      //for (int i = 0; i <=  17; i++) {
+      //  if (i >= 16) {
+      //    cout << (int)*(msg+i) << endl;
+      //  } else {
+      //    cout << *(msg+i) << endl;
+      //  }
       //}
-      //strcat(msg, port);
-      //bgp_send(port, msg);
-    } // for
+      bgp_send(port, msg, size);
+    } 
     cout << ">>> Message sent" << endl;
-    sleep(15);
+    sleep(3);
   } // while
   // end of SAMPLE
 }
 
-/**
- * Generate BGP message header
- * @param [in] bgpMessageType (1..4)
- * @result pointer to header
- */
-unsigned char * As::generate_header(unsigned char bgpMessageType) {
-  std::fill_n(header.marker, 16, '1'); // make the header "all ones" (is it 255s or 1s)
-  header.length = 18; // 18..4096 are the limits of header length value
-  header.type = (unsigned char)bgpMessageType;
+unsigned char * As::generate_header(unsigned char type, int *size) {
+  std::fill_n(header.marker, 16, '1');
+  header.length = 18;
+  header.type = type;
 
-  unsigned char *ptr;
-  // type==4==KEEPALIVE
-  if (bgpMessageType==4)
-  {
-	  unsigned char buffer[18]; // for the memory area to be persistent, malloc(18) must be used
-	  //ptr = serialize_header( buffer, &header ); // but no need to do that here, since the header is OK already!
-	  ptr = (unsigned char *)&header;
-	  // Comparing ptr and buffer
-	  cout << "Comparing ptr and buffer:" << endl;
-	  ptr[18]=0;buffer[18]=0; // to make them printable, there must be zero ending
-	  cout << "ptr=" << ptr << endl;
-	  cout << "buffer=" << buffer << endl;
+  unsigned char buffer[18], *ptr;
+  ptr = serialize_header( buffer, &header, size );
 
-	  // Just print out what inside buffer
-	  for (int i = 0; i <=  17; i++) {
-	    if (i >= 16) {
-	      cout << (int)buffer[i] << endl;
-	    } else {
-	      cout << buffer[i] << endl;
-	    }
-	  }
-  }
-  else {
-	  ptr = 0;
-  }
+  // Comparing ptr and buffer
+  cout << ptr << endl;
+  cout << buffer << endl;
+
+  // Just print out what inside buffer
+  //for (int i = 0; i <=  17; i++) {
+  //  if (i >= 16) {
+  //    cout << (int)ptr[i] << endl;
+  //  } else {
+  //    cout << ptr[i] << endl;
+  //  }
+  //}
   return ptr;
 }
 
-unsigned char * As::serialize_header(unsigned char *buffer, struct header *value)
+unsigned char * As::serialize_header(unsigned char *buffer, struct header *value, int *size)
 {
   for (int i = 0; i <= sizeof(value->marker) - 1; i++) {
-    buffer = serialize_char(buffer, value->marker[i]);
+    buffer = serialize_char(buffer, value->marker[i], size);
   }
-  buffer = serialize_char(buffer, value->length);
-  buffer = serialize_char(buffer, value->type);
-  return buffer;
+  buffer = serialize_char(buffer, value->length, size);
+  buffer = serialize_char(buffer, value->type, size);
+  cout << "Size: " << size << endl;
+  return buffer - *size;
 }
 
 // NOTE: dont need this at the moment, we consider all components inside struct is char
@@ -233,14 +226,24 @@ unsigned char * As::serialize_header(unsigned char *buffer, struct header *value
 //  return buffer + 4;
 //}
 
-unsigned char * As::serialize_char(unsigned char *buffer, char value)
+unsigned char * As::serialize_char(unsigned char *buffer, char value, int *size)
 {
   buffer[0] = value;
+  *size += 1;
   return buffer + 1;
 }
 
-unsigned char * As::generate_KEEPALIVE() {
-  unsigned char *msg = As::generate_header(4);
+unsigned char * As::generate_KEEPALIVE(int *size) {
+  unsigned char *msg = As::generate_header(4, size);
+  // NOTE: if print out things here, the pointer will point to wrong mem
+  //cout << "msg: " << (int)(*(msg+16)) << endl;
+  //for (int i = 0; i <=  17; i++) {
+  //  if (i >= 16) {
+  //    cout << (int)msg[i] << endl;
+  //  } else {
+  //    cout << msg[i] << endl;
+  //  }
+  //}
   return msg;
 } 
 
@@ -248,11 +251,10 @@ int main()
 {
   As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME );
 
-  //cout << ">>> Setting up AS..." << endl;
-  //thread thread1(&As::setup_listener, as);
-  //thread1.detach();
+  cout << ">>> Setting up AS..." << endl;
+  thread thread1(&As::setup_listener, as);
+  thread1.detach();
 
-  as.generate_header(4);
   as.keep_alive();
   return 0;
 }

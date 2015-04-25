@@ -90,8 +90,16 @@ void bgp_listen(char *port)
     if (bytes_received == -1)std::cout << "receive error!" << std::endl ;
     std::cout << bytes_received << " bytes received : ";// << std::endl ;
     if ( bytes_received >= 0 ) {
-        incomming_data_buffer[ bytes_received ] = '\0';
-        //std::cout << incomming_data_buffer << std::endl;
+        //incomming_data_buffer[ bytes_received ] = '\0';
+        //NOTE: need to write the handler for  every message type
+        std::cout << incomming_data_buffer << std::endl;
+        for (int i = 0; i <=  bytes_received; i++) {
+          if (i >= 16) {
+            cout << (int)incomming_data_buffer[i] << endl;
+          } else {
+            cout << incomming_data_buffer[i] << endl;
+          }
+        }
     }
     else {
     	std::cout << "### ERROR IN bytes_received" << std::endl;
