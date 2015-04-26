@@ -184,32 +184,41 @@ void As::keep_alive()
 
 unsigned char * As::generate_header(unsigned char type, int *size) {
 #define HEADER_MARKER_LENGTH 16
-  std::fill_n(header.marker, HEADER_MARKER_LENGTH, '1');
-  header.length = 18;
-  header.type = type;
+  std::fill_n(header.marker, HEADER_MARKER_LENGTH, '1'); // "All 1s", the decimal '1' is bin(00001111).
+  header.length = 19; // minimal KEEPALIVE header length: 16+2+1 as length is 2 octets
+  header.type = type; // one octet
 
   unsigned char *buffer;
   unsigned char *ptr;
 
+  //printf("buffer=%8x\n",buffer);
   buffer = (unsigned char*)malloc( header.length ); // reserve memory for buffer
+  printf("buffer=%8x\n",buffer);
 
+ //printf("ptr=%8x\n",ptr);
   ptr = serialize_header( buffer, &header, size );
+  printf("ptr=%8x\n",ptr);
+
+  // PROBLEM! Where is the beginning of the buffer
 
   // Comparing ptr and buffer
-  cout << ptr << endl;
-  cout << buffer << endl;
+  //cout << ptr << endl;
+  //cout << buffer << endl;
 
   // Just print out what inside buffer
-  //for (int i = 0; i <=  17; i++) {
-  //  if (i >= 16) {
-  //    cout << (int)ptr[i] << endl;
-  //  } else {
-  //    cout << ptr[i] << endl;
-  //  }
-  //}
+/**/
+  for (int i = 0; i < header.length; i++) {
+		printf("%2x ", ptr[i-*size+1]);
+  }
+  printf(" -- %2x ", '1'); // one as reference! '1'==0x31
+  printf("\n");
+/**/
   return ptr;
 }
 
+/**
+ * check the return value, is it just buffer?(I forgot the original line --JH)
+ */
 unsigned char * As::serialize_header(unsigned char *buffer, struct header *value, int *size)
 {
   uint16_t lengthN; // two octet short integer, for length in network byte order
@@ -225,7 +234,7 @@ unsigned char * As::serialize_header(unsigned char *buffer, struct header *value
   buffer = serialize_char(buffer, value->type, size);
   cout << "Size: " << size << endl;
   cout << "*Size: " << *size << endl;
-    return buffer - *size;
+  return buffer;
 }
 
 // NOTE: dont need this at the moment, we consider all components inside struct is char
@@ -284,6 +293,7 @@ int main()
   int realsize;
   int *size = &realsize;
   as.generate_header(4, size);
+  // free(buffer-*size) is needed somewhere...
 
   cout << ">>> Setting up AS..." << endl;
   thread thread1(&As::setup_listener, as);
