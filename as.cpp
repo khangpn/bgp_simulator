@@ -30,6 +30,7 @@ class As {
 
   unsigned char * serialize_int(unsigned char *buffer, int value);
   unsigned char * serialize_char(unsigned char *buffer, char value, int *size);
+  unsigned char * serialize_short(unsigned char *buffer, uint16_t value, int *size);
 
   // Total: 18 octets
   struct header {
@@ -182,11 +183,16 @@ void As::keep_alive()
 }
 
 unsigned char * As::generate_header(unsigned char type, int *size) {
-  std::fill_n(header.marker, 16, '1');
+#define HEADER_MARKER_LENGTH 16
+  std::fill_n(header.marker, HEADER_MARKER_LENGTH, '1');
   header.length = 18;
   header.type = type;
 
-  unsigned char buffer[18], *ptr;
+  unsigned char *buffer;
+  unsigned char *ptr;
+
+  buffer = (unsigned char*)malloc( header.length ); // reserve memory for buffer
+
   ptr = serialize_header( buffer, &header, size );
 
   // Comparing ptr and buffer
@@ -206,13 +212,20 @@ unsigned char * As::generate_header(unsigned char type, int *size) {
 
 unsigned char * As::serialize_header(unsigned char *buffer, struct header *value, int *size)
 {
+  uint16_t lengthN; // two octet short integer, for length in network byte order
+
   for (int i = 0; i <= sizeof(value->marker) - 1; i++) {
     buffer = serialize_char(buffer, value->marker[i], size);
   }
-  buffer = serialize_char(buffer, value->length, size);
+
+  lengthN = htons( value->length); // byte order conversion from Host to Network, for 2 octet Short integer
+  //buffer = serialize_char(buffer, value->length, size);
+  buffer = serialize_short(buffer, lengthN, size);
+
   buffer = serialize_char(buffer, value->type, size);
   cout << "Size: " << size << endl;
-  return buffer - *size;
+  cout << "*Size: " << *size << endl;
+    return buffer - *size;
 }
 
 // NOTE: dont need this at the moment, we consider all components inside struct is char
@@ -226,12 +239,29 @@ unsigned char * As::serialize_header(unsigned char *buffer, struct header *value
 //  return buffer + 4;
 //}
 
+/**
+ * add chatacter to buffer, increase buffer size value by 1
+ * @return pointer to next unused buffer position
+ */
 unsigned char * As::serialize_char(unsigned char *buffer, char value, int *size)
 {
   buffer[0] = value;
   *size += 1;
   return buffer + 1;
 }
+
+/**
+ * add 2 octet short int to buffer, increase buffer size value by 2
+ * @return pointer to next unused buffer position
+ */
+unsigned char * As::serialize_short(unsigned char *buffer, uint16_t value, int *size)
+{
+  //buffer[0] = value;
+  memcpy(buffer, &value, sizeof(uint16_t));
+  *size += sizeof(uint16_t);
+  return buffer + sizeof(uint16_t);
+}
+
 
 unsigned char * As::generate_KEEPALIVE(int *size) {
   unsigned char *msg = As::generate_header(4, size);
@@ -250,6 +280,10 @@ unsigned char * As::generate_KEEPALIVE(int *size) {
 int main()
 {
   As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME );
+
+  int realsize;
+  int *size = &realsize;
+  as.generate_header(4, size);
 
   cout << ">>> Setting up AS..." << endl;
   thread thread1(&As::setup_listener, as);
