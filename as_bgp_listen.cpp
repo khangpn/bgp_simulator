@@ -93,7 +93,7 @@ void bgp_listen(char *port)
         //incomming_data_buffer[ bytes_received ] = '\0';
         //NOTE: need to write the handler for  every message type
         std::cout << incomming_data_buffer << std::endl;
-        for (int i = 0; i <=  bytes_received; i++) {
+        for (int i = 0; i <  bytes_received; i++) {
           if (i >= 16) {
             cout << (int)incomming_data_buffer[i] << endl;
           } else {
