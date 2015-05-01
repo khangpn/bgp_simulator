@@ -15,7 +15,12 @@ class As {
   string port;
   int name;
   map<string, string> neighbours;
+  map<string, int> neighbours_state;
   const int HEADER_LENGTH = 18;
+  const int OPEN_TYPE = 1;
+  const int UPDATE_TYPE = 2;
+  const int NOTIFICATION_TYPE = 3;
+  const int KEEPALIVE_TYPE = 4;
 
   //unsigned char * serialize_int(unsigned char *buffer, int value);
   unsigned char * serialize_char(unsigned char *buffer, char value, int *size);
@@ -24,15 +29,8 @@ class As {
   struct header {
     unsigned char marker [16];
     unsigned char length = 18; //This should be 2 octets. Let's assume it 1octet atm.
-    /*
-      message types:
-      1 - OPEN
-      2 - UPDATE
-      3 - NOTIFICATION
-      4 - KEEPALIVE
-    */
     unsigned char type;
-  } header;
+  };
   unsigned char * serialize_HEADER(unsigned char * buffer, struct header *value, int *size);
 
   // Total: 7 octets
@@ -42,7 +40,7 @@ class As {
     unsigned char holdtime = 3; //Should be 2 octets
     unsigned char bgp_identifier [4] = {192, 168, 0 ,1}; // Hardcode AS IP
     //Atm, let's ignore optional parameters
-  } open_msg;
+  };
   unsigned char * serialize_OPEN(unsigned char * buffer, struct open_msg *value, int *size);
 
   public:
@@ -68,6 +66,7 @@ class As {
     unsigned char * generate_NOTIFICATION(int *size);
     unsigned char * generate_KEEPALIVE(int *size);
 
-    //unsigned char * handle_msg(const unsigned char *msg, const int bytes_received);
+    header deserialize_header(unsigned char *);
+    open_msg deserialize_open(unsigned char *);
     unsigned char * handle_msg(unsigned char const*, int);
 };

@@ -70,6 +70,7 @@ map<string, string> As::setup_neighbours(string neighbours_config)
 	    std::getline(lineStream, nb_name, ',');
 	    std::getline(lineStream, nb_port, ',');
 	    neighbours[nb_name] = nb_port;
+	    neighbours_state[nb_name] = 0;
 	  }
 	  config_file.close();
   }
@@ -173,13 +174,14 @@ unsigned char * As::serialize_char(unsigned char *buffer, char value, int *size)
 }
 
 unsigned char * As::generate_HEADER(unsigned char type, int *size, int msg_length = 0) {
-  std::fill_n(header.marker, 16, '1');
-  header.length += msg_length;
-  header.type = type;
+  header new_header;
+  std::fill_n(new_header.marker, 16, '1');
+  new_header.length += msg_length;
+  new_header.type = type;
 
   unsigned char *buffer = (unsigned char *) malloc(HEADER_LENGTH * sizeof(unsigned char));
   unsigned char *ptr;
-  ptr = serialize_HEADER( buffer, &header, size );
+  ptr = serialize_HEADER( buffer, &new_header, size );
 
   return ptr;
 }
@@ -204,14 +206,15 @@ unsigned char * As::generate_KEEPALIVE(int *size) {
     //unsigned char holdtime = 3; //Should be 2 octets
     //unsigned char bgp_identifier [4] = {192, 168, 0 ,1}; // Hardcode AS IP
 unsigned char * As::generate_OPEN(int *size) {
-  open_msg.my_as = As::name;
+  open_msg new_open_msg;
+  new_open_msg.my_as = As::name;
 
   int body_size = 0;
   unsigned char buffer[7], *msg_body;
-  msg_body = serialize_OPEN( buffer, &open_msg, &body_size );
+  msg_body = serialize_OPEN( buffer, &new_open_msg, &body_size );
 
   unsigned char header_buffer[HEADER_LENGTH], *msg_header;
-  msg_header = As::generate_HEADER(1, size);
+  msg_header = As::generate_HEADER(1, size, body_size);
 
   *size += body_size;
   unsigned char *total_msg = (unsigned char *)malloc(*size);
@@ -234,15 +237,45 @@ unsigned char * As::serialize_OPEN(unsigned char * buffer, struct open_msg *valu
   return buffer - *size;
 }
 
+As::header As::deserialize_header(unsigned char *header_stream) {
+  header msg_header;
+  for (int i = 0; i < 16; i++) {
+    msg_header.marker[i] = header_stream[i];
+  }
+  msg_header.length = header_stream[16];
+  msg_header.type = header_stream[17];
+  return msg_header;
+}
+
+As::open_msg As::deserialize_open(unsigned char *open_stream) {
+  open_msg msg_open;
+  msg_open.version = open_stream[0];
+  msg_open.my_as = open_stream[1];
+  msg_open.holdtime = open_stream[2];
+  for (int i = 3; i < 7; i++) {
+    msg_open.bgp_identifier[i] = open_stream[i];
+  }
+  return msg_open;
+}
+
 unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_received) {
-  for (int i = 0; i <  bytes_received; i++) {
-    if (i >= 16) {
-      cout << (int)msg[i] << endl;
-    } else {
-      cout << msg[i] << endl;
+  unsigned char *msg_return, status[1];
+  if (bytes_received > HEADER_LENGTH) {
+    unsigned char *msg_header = (unsigned char *)malloc(HEADER_LENGTH);
+    memcpy(msg_header, msg, HEADER_LENGTH);
+    header header_str = deserialize_header(msg_header);
+    if (header_str.type == OPEN_TYPE) {
+      unsigned char *msg_body = (unsigned char *)malloc(header_str.length - HEADER_LENGTH);
+      memcpy(msg_body, msg + HEADER_LENGTH, header_str.length - HEADER_LENGTH);
+      open_msg open_str = deserialize_open(msg_body);
+      string as_name = to_string((int)open_str.my_as);
+      neighbours_state[as_name] = 1; // update the neighbour state, switch to on
+      //for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
+      //  cout << "=======================" << endl;
+      //  cout << it->first << " : " << it->second<< endl;
+      //} 
     }
   }
-  unsigned char *msg_return, status[1];
   status[0] = 0;
   msg_return = status;
   return msg_return;
