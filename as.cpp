@@ -1,16 +1,6 @@
-#include <iostream>
-#include <cstring>      // Needed for memset
-#include <sys/socket.h> // Needed for the socket functions
-#include <netdb.h>      // Needed for the socket functions
-#include <unistd.h>
-#include <thread>
-#include <fstream>
-#include <string> // for std::string
-#include <sstream> // for std::stringstream
-#include <map> // for std::map
-#include <stdlib.h> // for std::sleep
-#include "as_bgp_listen.cpp"
-#include "as_bgp_send.cpp"
+#include "as.h"
+//#include "as_bgp_listen.cpp"
+//#include "as_bgp_send.cpp"
 
 #define SETUP_CONFIG_FILENAME "as_configs"
 #define SETUP_NEIGHBOUR_FILENAME "neighbours.csv"
@@ -18,59 +8,8 @@
 
 using namespace std;
 
-void bgp_send(char *port, char *message);
-void bgp_listen(char *port);
-
-class As {
-  string port;
-  int name;
-  map<string, string> neighbours;
-  const int HEADER_LENGTH = 18;
-
-  //unsigned char * serialize_int(unsigned char *buffer, int value);
-  unsigned char * serialize_char(unsigned char *buffer, char value, int *size);
-
-  // Total: 18 octets
-  struct header {
-    unsigned char marker [16];
-    unsigned char length = 18; //This should be 2 octets. Let's assume it 1octet atm.
-    /*
-      message types:
-      1 - OPEN
-      2 - UPDATE
-      3 - NOTIFICATION
-      4 - KEEPALIVE
-    */
-    unsigned char type;
-  } header;
-  unsigned char * serialize_HEADER(unsigned char * buffer, struct header *value, int *size);
-
-  // Total: 7 octets
-  struct open_msg {
-    unsigned char version = 4;
-    unsigned char my_as; //should be 2 octets
-    unsigned char holdtime = 3; //Should be 2 octets
-    unsigned char bgp_identifier [4] = {192, 168, 0 ,1}; // Hardcode AS IP
-    //Atm, let's ignore optional parameters
-  } open_msg;
-  unsigned char * serialize_OPEN(unsigned char * buffer, struct open_msg *value, int *size);
-
-  public:
-    As(string, string);
-    map<string, string> setup_neighbours(string);
-    void setup_listener();
-    void setup_as(string);
-    void neighbours_from_file(string);
-    string getPort() { return port; }
-    int getName() { return name; }
-    void keep_alive();
-    void send_OPEN();
-    unsigned char * generate_HEADER(unsigned char type, int *size, int msg_length);
-    unsigned char * generate_OPEN(int *size);
-    unsigned char * generate_UPDATE(int *size);
-    unsigned char * generate_NOTIFICATION(int *size);
-    unsigned char * generate_KEEPALIVE(int *size);
-};
+//void As::bgp_send(char *port, unsigned char *msg, const int msg_len);
+//void As::bgp_listen(char *port);
 
 As::As (string as_config, string neighbours_config) {
   cout << ">>> Setting up AS..." << endl;
@@ -193,6 +132,7 @@ void As::keep_alive()
       int size = 0;
       unsigned char *msg = As::generate_KEEPALIVE(&size);
       bgp_send(port, msg, size);
+      free(msg);
     } 
     //cout << ">>> KEEPALIVE sent" << endl;
     sleep(3);
@@ -209,6 +149,7 @@ void As::send_OPEN()
     int size = 0;
     unsigned char *msg = As::generate_OPEN(&size);
     bgp_send(port, msg, size);
+    free(msg);
     cout << ">>> OPEN sent to: " << port << endl;
   } 
 }
@@ -236,21 +177,10 @@ unsigned char * As::generate_HEADER(unsigned char type, int *size, int msg_lengt
   header.length += msg_length;
   header.type = type;
 
-  unsigned char buffer[HEADER_LENGTH], *ptr;
+  unsigned char *buffer = (unsigned char *) malloc(HEADER_LENGTH * sizeof(unsigned char));
+  unsigned char *ptr;
   ptr = serialize_HEADER( buffer, &header, size );
 
-  // Comparing ptr and buffer
-  //cout << ptr << endl;
-  //cout << buffer << endl;
-
-  // Just print out what inside buffer
-  //for (int i = 0; i <=  17; i++) {
-  //  if (i >= 16) {
-  //    cout << (int)ptr[i] << endl;
-  //  } else {
-  //    cout << ptr[i] << endl;
-  //  }
-  //}
   return ptr;
 }
 
@@ -266,15 +196,6 @@ unsigned char * As::serialize_HEADER(unsigned char *buffer, struct header *value
 
 unsigned char * As::generate_KEEPALIVE(int *size) {
   unsigned char *msg = As::generate_HEADER(4, size);
-  // NOTE: if print out things here, the pointer will point to wrong mem
-  //cout << "msg: " << (int)(*(msg+16)) << endl;
-  //for (int i = 0; i <=  17; i++) {
-  //  if (i >= 16) {
-  //    cout << (int)msg[i] << endl;
-  //  } else {
-  //    cout << msg[i] << endl;
-  //  }
-  //}
   return msg;
 } 
 
@@ -289,19 +210,15 @@ unsigned char * As::generate_OPEN(int *size) {
   unsigned char buffer[7], *msg_body;
   msg_body = serialize_OPEN( buffer, &open_msg, &body_size );
 
-  //unsigned char *msg_header = As::generate_HEADER(1, size, body_size);
-  //cout << "Message HEADER: " << *msg_header << endl;
-
-  std::fill_n(header.marker, 16, '1');
-  header.length = HEADER_LENGTH + body_size;
-  header.type = 1;
   unsigned char header_buffer[HEADER_LENGTH], *msg_header;
-  msg_header = As::serialize_HEADER( header_buffer, &header, size );
+  msg_header = As::generate_HEADER(1, size);
 
   *size += body_size;
   unsigned char *total_msg = (unsigned char *)malloc(*size);
   memcpy(total_msg, msg_header, HEADER_LENGTH);
   memcpy(total_msg + HEADER_LENGTH, msg_body, body_size);
+
+  free(msg_header);
 
   return total_msg;
 }
@@ -315,6 +232,20 @@ unsigned char * As::serialize_OPEN(unsigned char * buffer, struct open_msg *valu
   }
   //cout << "msg: " << (int)(*(buffer-7)) << endl;
   return buffer - *size;
+}
+
+unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_received) {
+  for (int i = 0; i <  bytes_received; i++) {
+    if (i >= 16) {
+      cout << (int)msg[i] << endl;
+    } else {
+      cout << msg[i] << endl;
+    }
+  }
+  unsigned char *msg_return, status[1];
+  status[0] = 0;
+  msg_return = status;
+  return msg_return;
 }
 
 int main()

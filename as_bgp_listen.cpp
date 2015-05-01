@@ -3,6 +3,7 @@
 #include <sys/socket.h> // Needed for the socket functions
 #include <netdb.h>      // Needed for the socket functions
 #include <unistd.h>
+#include "as.h"
 
 using namespace std;
 
@@ -11,7 +12,7 @@ using namespace std;
 #define INCOMING_DATA_BUFFER_SIZE 2000
 #endif
 
-void bgp_listen(char *port)
+void As::bgp_listen(char *port)
 {
   /* Setting up struct */
   int status;
@@ -92,14 +93,26 @@ void bgp_listen(char *port)
     if ( bytes_received >= 0 ) {
         //incomming_data_buffer[ bytes_received ] = '\0';
         //NOTE: need to write the handler for  every message type
-        std::cout << incomming_data_buffer << std::endl;
-        for (int i = 0; i <  bytes_received; i++) {
-          if (i >= 16) {
-            cout << (int)incomming_data_buffer[i] << endl;
-          } else {
-            cout << incomming_data_buffer[i] << endl;
-          }
+        //std::cout << incomming_data_buffer << std::endl;
+        //for (int i = 0; i <  bytes_received; i++) {
+        //  if (i >= 16) {
+        //    cout << (int)incomming_data_buffer[i] << endl;
+        //  } else {
+        //    cout << incomming_data_buffer[i] << endl;
+        //  }
+        //}
+        unsigned char * msg_return = As::handle_msg(incomming_data_buffer, bytes_received);
+
+        /* Sending message */
+        if ((int)*msg_return == 0) {
+          std::cout << "send()ing message..."  << std::endl;
+          char msg[] = "Hi! I got your msg.";
+          int len;
+          ssize_t bytes_sent;
+          len = strlen(msg);
+          bytes_sent = send(new_sd, msg, len, 0);
         }
+        /* ========== END ========== */
     }
     else {
     	std::cout << "### ERROR IN bytes_received" << std::endl;
@@ -114,16 +127,6 @@ void bgp_listen(char *port)
  	 case default:
  }
 */
-
-    /* ========== END ========== */
-
-    /* Sending message */
-    std::cout << "send()ing message..."  << std::endl;
-    char msg[] = "Hi! I got your msg.";
-    int len;
-    ssize_t bytes_sent;
-    len = strlen(msg);
-    bytes_sent = send(new_sd, msg, len, 0);
     /* ========== END ========== */
 
     close(new_sd);

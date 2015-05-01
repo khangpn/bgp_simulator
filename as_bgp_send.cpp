@@ -7,12 +7,13 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 
+#include "as.h"
 //let's have in buf size at least 1500 (MTU of 1500 is common)
 #ifndef INCOMING_DATA_BUFFER_SIZE
 #define INCOMING_DATA_BUFFER_SIZE 2000
 #endif
 
-void bgp_send(char *port, unsigned char *msg, const int msg_len)
+void As::bgp_send(char *port, unsigned char *msg, const int msg_len)
 {
   /* Setting up struct */
   int status;
