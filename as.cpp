@@ -111,7 +111,7 @@ void As::setup_listener()
   cout << ">>> Setting up listener..." << endl;
 	// Convert string to char[]
 	char listen_port[10];
-	strcpy(listen_port, port.c_str());
+	strcpy(listen_port, As::port.c_str());
   cout << "Listening port: " << listen_port << endl;
 
 	// simple consistency checks for port read from file
@@ -124,16 +124,24 @@ void As::setup_listener()
 void As::keep_alive() 
 {
   while(true) {
-    for (map<string, string>::iterator it=neighbours.begin(); it!=neighbours.end(); ++it) {
-      //cout << it->first << " " << it->second << endl;
-      // Convert string to char[]
-      char port[10];
-      strcpy(port, it->second.c_str());
+    for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
+      if (it->second == 1) {
+        std::map<string,string>::iterator neighbour;
+        string as_name = it->first;
 
-      int size = 0;
-      unsigned char *msg = As::generate_KEEPALIVE(&size);
-      bgp_send(port, msg, size);
-      free(msg);
+        if (neighbours.find(as_name) != neighbours.end()) {
+          // Convert string to char[]
+          char port[10];
+          strcpy(port, neighbours[as_name].c_str());
+
+          int size = 0;
+          unsigned char *msg = As::generate_KEEPALIVE(&size);
+          bgp_send(port, msg, size);
+          free(msg);
+          cout << "=======================" << endl;
+          cout << "KEEPALIVE SENT TO: " << port << endl;
+        }
+      }
     } 
     //cout << ">>> KEEPALIVE sent" << endl;
     sleep(3);
@@ -143,7 +151,6 @@ void As::keep_alive()
 void As::send_OPEN() 
 {
   for (map<string, string>::iterator it=neighbours.begin(); it!=neighbours.end(); ++it) {
-    cout << ">>> Sending OPEN to: " << port << endl;
     char port[10];
     strcpy(port, it->second.c_str());
 
@@ -151,7 +158,8 @@ void As::send_OPEN()
     unsigned char *msg = As::generate_OPEN(&size);
     bgp_send(port, msg, size);
     free(msg);
-    cout << ">>> OPEN sent to: " << port << endl;
+    cout << "=======================" << endl;
+    cout << "OPEN SENT TO: " << port << endl;
   } 
 }
 
@@ -260,35 +268,50 @@ As::open_msg As::deserialize_open(unsigned char *open_stream) {
 
 unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_received) {
   unsigned char *msg_return, status[1];
-  if (bytes_received > HEADER_LENGTH) {
+  if (bytes_received >= HEADER_LENGTH) {
     unsigned char *msg_header = (unsigned char *)malloc(HEADER_LENGTH);
     memcpy(msg_header, msg, HEADER_LENGTH);
     header header_str = deserialize_header(msg_header);
+
+    // Handle OPEN msg
     if (header_str.type == OPEN_TYPE) {
       unsigned char *msg_body = (unsigned char *)malloc(header_str.length - HEADER_LENGTH);
       memcpy(msg_body, msg + HEADER_LENGTH, header_str.length - HEADER_LENGTH);
       open_msg open_str = deserialize_open(msg_body);
       string as_name = to_string((int)open_str.my_as);
-      neighbours_state[as_name] = 1; // update the neighbour state, switch to on
-      //for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
-      //  cout << "=======================" << endl;
-      //  cout << it->first << " : " << it->second<< endl;
-      //} 
+
+      if (neighbours_state.find(as_name) != neighbours_state.end()) {
+        neighbours_state[as_name] = 1; // update the neighbour state, switch to on
+        cout << "=======================" << endl;
+        cout << "NEIGHBOUR STATE UPDATED: " << as_name << " - " << neighbours_state[as_name] << endl;
+      }
     }
   }
+
+  //cout << "=======================" << endl;
+  //for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
+  //  cout << it->first << " : " << it->second<< endl;
+  //} 
+
   status[0] = 0;
   msg_return = status;
   return msg_return;
 }
 
+void As::run() {
+  thread listener_thread(&As::setup_listener, this);
+  listener_thread.detach();
+
+  //thread KEEPALIVE_thread(&As::keep_alive, this);
+  //KEEPALIVE_thread.detach();
+
+  As::send_OPEN();
+  As::keep_alive();
+}
+
 int main()
 {
   As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME );
-
-  thread thread1(&As::setup_listener, as);
-  thread1.detach();
-
-  //as.keep_alive();
-  as.send_OPEN();
+  as.run();
   return 0;
 }

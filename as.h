@@ -69,4 +69,6 @@ class As {
     header deserialize_header(unsigned char *);
     open_msg deserialize_open(unsigned char *);
     unsigned char * handle_msg(unsigned char const*, int);
+
+    void run();
 };
