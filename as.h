@@ -12,9 +12,11 @@
 using namespace std;
 
 class RoutingItem {
-  int as_name; // Instead of using IP prefixes, we use AS name to indicate AS
-  unsigned char * path; //Format: "1 2 3 4"
-  int priority;
+  public:
+    int as_name; // Instead of using IP prefixes, we use AS name to indicate AS
+    int path_length; 
+    unsigned char * path; //Format: "1 2 3 4"
+    int priority;
 };
 
 #define RT_SIZE 1000
@@ -24,9 +26,12 @@ class RoutingTable {
 
   public:
     int getSize() { return RoutingTable::size; }
-    void addRoute(int as_name, unsigned char * path, int priority);
+    void addRoute(int as_name, int path_length, unsigned char * path, int priority);
     void removeRoute(int as_name, unsigned char * path);
-    void setRoutePriority(int as_name, unsigned char * new_path, int priority);
+    void setRoutePriority(int as_name, unsigned char * path, int priority);
+    RoutingItem * getRoutes(int as_name);
+    RoutingItem * getRouteByPath(int as_name, unsigned char * path);
+    void print_table();
 };
 
 class As {
@@ -97,8 +102,13 @@ class As {
     header deserialize_HEADER(unsigned char *);
     open_msg deserialize_OPEN(unsigned char *);
     update_msg deserialize_UPDATE(unsigned char *);
+
+    void switch_neighbour_on(string as_name);
+    void add_route(update_msg, int priority);
+    void remove_route(update_msg, int priority);
     unsigned char * handle_msg(unsigned char const*, int);
 
     void self_advertise();
+    void transfer_add_route(update_msg);
     void run();
 };

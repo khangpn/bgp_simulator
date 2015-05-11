@@ -347,6 +347,14 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
     // Handle UPDATE msg
     if (header_str.type == UPDATE_TYPE) {
       update_msg update_str = deserialize_UPDATE(msg_body);
+      if ((int)update_str.withdrawn_length > 0) {
+      }
+      if ((int)update_str.path_length > 0) {
+        As::add_route(update_str, 0);
+        thread transfer_thread(&As::transfer_add_route, this, update_str);
+        transfer_thread.detach();
+      }
+      As::rt.print_table();
     }
 
     free(msg_body);
@@ -355,6 +363,43 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
   status[0] = 0;
   msg_return = status;
   return msg_return;
+}
+
+void As::add_route(update_msg msg_update, int priority = 0){
+  int path_length = (int)msg_update.path_length;
+  int as_name = (int)msg_update.path_value[0]; // The first node is the target AS
+  As::rt.addRoute(as_name, path_length, msg_update.path_value, priority);
+}
+
+void As::transfer_add_route(update_msg msg_update) {
+  int old_length = (int)msg_update.path_length;
+  int target = (int)msg_update.path_value[0];
+  int sender = (int)msg_update.path_value[old_length - 1];
+  unsigned char * new_path = (unsigned char *) malloc(old_length + 1);
+  memcpy(new_path, msg_update.path_value, old_length);
+  new_path[old_length] = As::name; // Add current AS to the end of the path
+  msg_update.path_value = new_path;
+  msg_update.path_length += 1;
+  int msg_size = 0;
+  unsigned char *msg= As::generate_UPDATE(&msg_size, msg_update);
+
+
+  for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
+    if (it->second == 1) {
+      int as_name = stoi(it->first);
+      if (as_name != target && as_name != sender) {
+        if (neighbours.find(it->first) != neighbours.end()) {
+          char port[10];
+          strcpy(port, neighbours[it->first].c_str());
+          bgp_send(port, msg, msg_size);
+          cout << "=======================" << endl;
+          cout << "UPDATE SENT TO: " << port << endl;
+        }
+      }
+    }
+  } 
+  free(new_path);
+  free(msg);
 }
 
 void As::self_advertise() {
