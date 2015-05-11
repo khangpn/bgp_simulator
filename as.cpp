@@ -124,6 +124,10 @@ void As::setup_listener()
 void As::keep_alive() 
 {
   while(true) {
+    // Send UPDATE msg to self advertise
+    thread advertise_thread(&As::self_advertise, this);
+    advertise_thread.detach();
+
     for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
       if (it->second == 1) {
         string as_name = it->first;
@@ -142,7 +146,6 @@ void As::keep_alive()
         }
       }
     } 
-    //cout << ">>> KEEPALIVE sent" << endl;
     sleep(3);
   }
 }
@@ -338,8 +341,6 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
 
       if (neighbours_state.find(as_name) != neighbours_state.end()) {
         neighbours_state[as_name] = 1; // update the neighbour state, switch to on
-        thread advertise_thread(&As::self_advertise, this);
-        advertise_thread.detach();
         cout << "=======================" << endl;
         cout << "NEIGHBOUR STATE UPDATED: " << as_name << " - " << neighbours_state[as_name] << endl;
       }

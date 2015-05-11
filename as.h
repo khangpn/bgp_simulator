@@ -27,10 +27,11 @@ class RoutingTable {
   public:
     int getSize() { return RoutingTable::size; }
     void addRoute(int as_name, int path_length, unsigned char * path, int priority);
-    void removeRoute(int as_name, unsigned char * path);
+    void removeRoute(int as_name);
     void setRoutePriority(int as_name, unsigned char * path, int priority);
     RoutingItem * getRoutes(int as_name);
     RoutingItem * getRouteByPath(int as_name, unsigned char * path);
+    RoutingItem * findRoute(int as_name, int path_length, unsigned char * path);
     void print_table();
 };
 
