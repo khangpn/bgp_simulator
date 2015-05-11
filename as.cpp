@@ -126,7 +126,6 @@ void As::keep_alive()
   while(true) {
     for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
       if (it->second == 1) {
-        std::map<string,string>::iterator neighbour;
         string as_name = it->first;
 
         if (neighbours.find(as_name) != neighbours.end()) {
@@ -209,10 +208,6 @@ unsigned char * As::generate_KEEPALIVE(int *size) {
   return msg;
 } 
 
-    //unsigned char version = 4;
-    //unsigned char my_as; //should be 2 octets
-    //unsigned char holdtime = 3; //Should be 2 octets
-    //unsigned char bgp_identifier [4] = {192, 168, 0 ,1}; // Hardcode AS IP
 unsigned char * As::generate_OPEN(int *size) {
   open_msg new_open_msg;
   new_open_msg.my_as = As::name;
@@ -221,7 +216,8 @@ unsigned char * As::generate_OPEN(int *size) {
   unsigned char buffer[7], *msg_body;
   msg_body = serialize_OPEN( buffer, &new_open_msg, &body_size );
 
-  unsigned char header_buffer[HEADER_LENGTH], *msg_header;
+  //unsigned char header_buffer[HEADER_LENGTH], *msg_header;
+  unsigned char *msg_header;
   msg_header = As::generate_HEADER(1, size, body_size);
 
   *size += body_size;
@@ -230,6 +226,7 @@ unsigned char * As::generate_OPEN(int *size) {
   memcpy(total_msg + HEADER_LENGTH, msg_body, body_size);
 
   free(msg_header);
+  //free(msg_body);
 
   return total_msg;
 }
@@ -245,7 +242,45 @@ unsigned char * As::serialize_OPEN(unsigned char * buffer, struct open_msg *valu
   return buffer - *size;
 }
 
-As::header As::deserialize_header(unsigned char *header_stream) {
+unsigned char * As::generate_UPDATE(int *size, update_msg update_info) {
+  int body_size = 0;
+  unsigned char buffer[100], *msg_body;
+  msg_body = serialize_UPDATE( buffer, &update_info, &body_size );
+
+  unsigned char *msg_header;
+  msg_header = As::generate_HEADER(2, size, body_size);
+
+  *size += body_size;
+  unsigned char *total_msg = (unsigned char *)malloc(*size);
+  memcpy(total_msg, msg_header, HEADER_LENGTH);
+  memcpy(total_msg + HEADER_LENGTH, msg_body, body_size);
+
+  free(msg_header);
+
+  return total_msg;
+}
+
+unsigned char * As::serialize_UPDATE(unsigned char * buffer, struct update_msg *value, int *size) {
+  buffer = serialize_char(buffer, value->withdrawn_length, size);
+  //cout << "UPDATE WITHDRAW_LENGTH:" << (int)value->withdrawn_length << endl;
+  if ((int)value->withdrawn_length > 0) {
+    for (int i = 0; i < (int)value->withdrawn_length; i++) {
+      buffer = serialize_char(buffer, value->withdrawn_route[i], size);
+      //cout << "UPDATE WITHDRAW_ROUTE:" << (int)value->withdrawn_route[i] << endl;
+    }
+  }
+  buffer = serialize_char(buffer, value->path_length, size);
+  //cout << "UPDATE PATH_LENGTH:" << (int)value->path_length << endl;
+  if ((int)value->path_length > 0) {
+    for (int i = 0; i < (int)value->path_length; i++) {
+      buffer = serialize_char(buffer, value->path_value[i], size);
+      //cout << "UPDATE PATH_VALUE:" << (int)value->path_value[i] << endl;
+    }
+  }
+  return buffer - *size;
+}
+
+As::header As::deserialize_HEADER(unsigned char *header_stream) {
   header msg_header;
   for (int i = 0; i < 16; i++) {
     msg_header.marker[i] = header_stream[i];
@@ -255,15 +290,35 @@ As::header As::deserialize_header(unsigned char *header_stream) {
   return msg_header;
 }
 
-As::open_msg As::deserialize_open(unsigned char *open_stream) {
+As::open_msg As::deserialize_OPEN(unsigned char *open_stream) {
   open_msg msg_open;
   msg_open.version = open_stream[0];
   msg_open.my_as = open_stream[1];
   msg_open.holdtime = open_stream[2];
   for (int i = 3; i < 7; i++) {
-    msg_open.bgp_identifier[i] = open_stream[i];
+    msg_open.bgp_identifier[i - 3] = open_stream[i];
   }
   return msg_open;
+}
+
+As::update_msg As::deserialize_UPDATE(unsigned char *update_stream) {
+  As::update_msg msg_update;
+  if ((int)update_stream[0] > 0) {
+    msg_update.withdrawn_length = update_stream[0];
+    int length = (int)update_stream[0];
+    msg_update.withdrawn_route = (unsigned char *) malloc(length);
+    for (int i = 0; i < length; i++) {
+      msg_update.withdrawn_route[i] = update_stream[i+1];
+    }
+  } else {
+    msg_update.path_length = update_stream[1];
+    int length = (int)update_stream[1];
+    msg_update.path_value = (unsigned char *) malloc(length);
+    for (int i = 0; i < length; i++) {
+      msg_update.path_value[i] = update_stream[i+2];
+    }
+  }
+  return msg_update;
 }
 
 unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_received) {
@@ -271,31 +326,62 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
   if (bytes_received >= HEADER_LENGTH) {
     unsigned char *msg_header = (unsigned char *)malloc(HEADER_LENGTH);
     memcpy(msg_header, msg, HEADER_LENGTH);
-    header header_str = deserialize_header(msg_header);
+    header header_str = deserialize_HEADER(msg_header);
+
+    unsigned char *msg_body = (unsigned char *)malloc(header_str.length - HEADER_LENGTH);
+    memcpy(msg_body, msg + HEADER_LENGTH, header_str.length - HEADER_LENGTH);
 
     // Handle OPEN msg
     if (header_str.type == OPEN_TYPE) {
-      unsigned char *msg_body = (unsigned char *)malloc(header_str.length - HEADER_LENGTH);
-      memcpy(msg_body, msg + HEADER_LENGTH, header_str.length - HEADER_LENGTH);
-      open_msg open_str = deserialize_open(msg_body);
+      open_msg open_str = deserialize_OPEN(msg_body);
       string as_name = to_string((int)open_str.my_as);
 
       if (neighbours_state.find(as_name) != neighbours_state.end()) {
         neighbours_state[as_name] = 1; // update the neighbour state, switch to on
+        thread advertise_thread(&As::self_advertise, this);
+        advertise_thread.detach();
         cout << "=======================" << endl;
         cout << "NEIGHBOUR STATE UPDATED: " << as_name << " - " << neighbours_state[as_name] << endl;
       }
     }
-  }
+    // Handle UPDATE msg
+    if (header_str.type == UPDATE_TYPE) {
+      update_msg update_str = deserialize_UPDATE(msg_body);
+    }
 
-  //cout << "=======================" << endl;
-  //for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
-  //  cout << it->first << " : " << it->second<< endl;
-  //} 
+    free(msg_body);
+  }
 
   status[0] = 0;
   msg_return = status;
   return msg_return;
+}
+
+void As::self_advertise() {
+  update_msg new_update_msg; 
+  new_update_msg.path_length = 1;
+  new_update_msg.path_value = (unsigned char *) malloc(1);
+  new_update_msg.path_value[0] = As::name;
+  //cout << "UPDATE INITIAL PATH_VALUE: " << (int)new_update_msg.path_value[0] << endl;
+  
+  int msg_size = 0;
+  unsigned char *msg= As::generate_UPDATE(&msg_size, new_update_msg);
+
+  free(new_update_msg.path_value);
+
+  for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
+    if (it->second == 1) {
+      string as_name = it->first;
+      if (neighbours.find(as_name) != neighbours.end()) {
+        char port[10];
+        strcpy(port, neighbours[as_name].c_str());
+        bgp_send(port, msg, msg_size);
+        cout << "=======================" << endl;
+        cout << "UPDATE SENT TO: " << port << endl;
+      }
+    }
+  } 
+  free(msg);
 }
 
 void As::run() {

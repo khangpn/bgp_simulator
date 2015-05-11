@@ -11,11 +11,30 @@
 #include <stdlib.h> // for std::sleep
 using namespace std;
 
+class RoutingItem {
+  int as_name; // Instead of using IP prefixes, we use AS name to indicate AS
+  unsigned char * path; //Format: "1 2 3 4"
+  int priority;
+};
+
+#define RT_SIZE 1000
+class RoutingTable {
+  int size = 0;
+  RoutingItem items[RT_SIZE];
+
+  public:
+    int getSize() { return RoutingTable::size; }
+    void addRoute(int as_name, unsigned char * path, int priority);
+    void removeRoute(int as_name, unsigned char * path);
+    void setRoutePriority(int as_name, unsigned char * new_path, int priority);
+};
+
 class As {
   string port;
   int name;
   map<string, string> neighbours;
   map<string, int> neighbours_state;
+  RoutingTable rt;
   const int HEADER_LENGTH = 18;
   const int OPEN_TYPE = 1;
   const int UPDATE_TYPE = 2;
@@ -43,6 +62,15 @@ class As {
   };
   unsigned char * serialize_OPEN(unsigned char * buffer, struct open_msg *value, int *size);
 
+  //ASSUMPTION: this is a simple custom update msg.
+  struct update_msg {
+    unsigned char withdrawn_length = 0;
+    unsigned char * withdrawn_route;
+    unsigned char path_length = 0;
+    unsigned char * path_value;
+  };
+  unsigned char * serialize_UPDATE(unsigned char * buffer, struct update_msg *value, int *size);
+
   public:
     As(string, string);
 
@@ -62,13 +90,15 @@ class As {
 
     unsigned char * generate_HEADER(unsigned char type, int *size, int msg_length);
     unsigned char * generate_OPEN(int *size);
-    unsigned char * generate_UPDATE(int *size);
+    unsigned char * generate_UPDATE(int *size, update_msg msg);
     unsigned char * generate_NOTIFICATION(int *size);
     unsigned char * generate_KEEPALIVE(int *size);
 
-    header deserialize_header(unsigned char *);
-    open_msg deserialize_open(unsigned char *);
+    header deserialize_HEADER(unsigned char *);
+    open_msg deserialize_OPEN(unsigned char *);
+    update_msg deserialize_UPDATE(unsigned char *);
     unsigned char * handle_msg(unsigned char const*, int);
 
+    void self_advertise();
     void run();
 };
