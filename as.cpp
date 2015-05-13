@@ -1,4 +1,6 @@
 #include "as.h"
+#include "stdio.h"
+
 //#include "as_bgp_listen.cpp"
 //#include "as_bgp_send.cpp"
 
@@ -42,7 +44,7 @@ void As::setup_as(string as_config) {
 	  std::getline(lineStream, as_name, ',');
 	  std::getline(lineStream, as_port, ',');
     cout << "NAME: " << as_name << endl;
-    As::name = std::stoi(as_name);
+    As::name = atoi(as_name.c_str());
     cout << "PORT: " << as_port << endl;
     As::port = as_port;
 	  config_file.close();
@@ -70,7 +72,7 @@ map<int, string> As::setup_neighbours(string neighbours_config)
 	    std::getline(lineStream, tmp_name, ',');
 	    std::getline(lineStream, nb_port, ',');
 
-      int nb_name = std::stoi(tmp_name);
+      int nb_name = atoi( tmp_name.c_str() ); // stoi was incompatible with a Cygwin setup
 	    neighbours[nb_name] = nb_port;
 	    //neighbours_state[nb_name] = 0;
 	    neighbours_state[nb_name] = 0;
