@@ -226,7 +226,7 @@ int routeTable::ASPATHlength(string ASPATH)
 /**
  *
  * @name    queryNextHop
- * @brief  	What is the next hop IP address for given ASNAME
+ * @brief  	What is the next hop for given ASNAME
  * @ingroup routeTable
  *
  * Finds the next hop for given ASNAME, even when the given ASNAME is not in the neighbours.
@@ -234,7 +234,7 @@ int routeTable::ASPATHlength(string ASPATH)
  *
  * @param [in] (string destinationASNAME) target ASNAME as string
  *
- * @retval int Returns IP address (IPv4 address) in int format
+ * @retval int ASNAME
  *
  */
 int routeTable::queryNextHop(string destinationASNAME)
