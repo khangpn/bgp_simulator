@@ -116,6 +116,7 @@ class As {
     unsigned char * handle_msg(unsigned char const* msg, int bytes_received, int * byte_sending);
 
     void withdrawn_nb_from_rt(int as_name);
+    void add_nb_to_rt(int as_name);
     void self_advertise();
     void transfer_add_route(update_msg);
     void run();

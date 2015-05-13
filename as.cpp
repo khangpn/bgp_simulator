@@ -146,6 +146,8 @@ void As::keep_alive()
           if (status == -1) {
             As::switch_neighbour(as_name, NB_OFF);
             As::withdrawn_nb_from_rt(as_name);
+          } else {
+            As::add_nb_to_rt(as_name);
           }
         }
       }
@@ -401,9 +403,9 @@ void As::add_route(update_msg msg_update, int priority = 0){
 }
 
 void As::remove_route(update_msg msg_update) {
-  int path_length = (int)msg_update.path_length;
-  int as_name = (int)msg_update.path_value[0]; // The first node is the target AS
-  As::rt.removeRoute(as_name, path_length, msg_update.path_value);
+  int path_length = (int)msg_update.withdrawn_length;
+  int as_name = (int)msg_update.withdrawn_route[0]; // The first node is the target AS
+  As::rt.removeRoute(as_name, path_length, msg_update.withdrawn_route);
 
   As::rt.print_table();
 }
@@ -440,12 +442,23 @@ void As::transfer_add_route(update_msg msg_update) {
   free(msg);
 }
 
+void As::add_nb_to_rt(int as_name){
+  update_msg msg_update; 
+  msg_update.path_length = 1;
+  msg_update.path_value = (unsigned char *) malloc(1);
+  msg_update.path_value[0] = as_name;
+  if (As::rt.findRoute(as_name, 1, msg_update.path_value) == NULL) {
+    As::add_route(msg_update, 0);
+    As::rt.print_table();
+  }
+}
+
 void As::withdrawn_nb_from_rt(int as_name) {
-  update_msg new_update_msg; 
-  new_update_msg.withdrawn_length = 1;
-  new_update_msg.withdrawn_route = (unsigned char *) malloc(1);
-  new_update_msg.withdrawn_route[0] = as_name;
-  As::remove_route(new_update_msg);
+  update_msg msg_update; 
+  msg_update.withdrawn_length = 1;
+  msg_update.withdrawn_route = (unsigned char *) malloc(1);
+  msg_update.withdrawn_route[0] = as_name;
+  As::remove_route(msg_update);
 
   As::rt.print_table();
 }
@@ -492,8 +505,8 @@ void As::run() {
   open_thread.detach();
 
   // Send UPDATE msg to self advertise
-  thread advertise_thread(&As::self_advertise, this);
-  advertise_thread.detach();
+  //thread advertise_thread(&As::self_advertise, this);
+  //advertise_thread.detach();
 
   As::keep_alive();
 }
