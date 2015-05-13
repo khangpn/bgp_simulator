@@ -27,19 +27,24 @@ class RoutingTable {
   public:
     int getSize() { return RoutingTable::size; }
     void addRoute(int as_name, int path_length, unsigned char * path, int priority);
-    void removeRoute(int as_name);
+    void removeRoute(int as_name, int path_length, unsigned char * path);
     void setRoutePriority(int as_name, unsigned char * path, int priority);
     RoutingItem * getRoutes(int as_name);
     RoutingItem * getRouteByPath(int as_name, unsigned char * path);
     RoutingItem * findRoute(int as_name, int path_length, unsigned char * path);
+    int indexOfRoute(int as_name, int path_length, unsigned char * path);
     void print_table();
 };
 
+#define NB_OFF 0
+#define NB_ON 1
 class As {
   string port;
   int name;
-  map<string, string> neighbours;
-  map<string, int> neighbours_state;
+  //map<string, string> neighbours;
+  //map<string, int> neighbours_state;
+  map<int, string> neighbours;
+  map<int, int> neighbours_state;
   RoutingTable rt;
   const int HEADER_LENGTH = 18;
   const int OPEN_TYPE = 1;
@@ -83,16 +88,17 @@ class As {
     string getPort() { return port; }
     int getName() { return name; }
 
-    void bgp_send(char *port, unsigned char *msg, const int msg_len);
+    int bgp_send(char *port, unsigned char *msg, const int msg_len);
     void bgp_listen(char *port);
 
-    map<string, string> setup_neighbours(string);
+    map<int, string> setup_neighbours(string);
     void setup_listener();
     void setup_as(string);
     void neighbours_from_file(string);
 
     void keep_alive();
     void send_OPEN();
+    void ack_OPEN();
 
     unsigned char * generate_HEADER(unsigned char type, int *size, int msg_length);
     unsigned char * generate_OPEN(int *size);
@@ -104,11 +110,12 @@ class As {
     open_msg deserialize_OPEN(unsigned char *);
     update_msg deserialize_UPDATE(unsigned char *);
 
-    void switch_neighbour_on(string as_name);
+    void switch_neighbour(int as_name, int state); //state = 0 (off) || 1 (on)
     void add_route(update_msg, int priority);
-    void remove_route(update_msg, int priority);
-    unsigned char * handle_msg(unsigned char const*, int);
+    void remove_route(update_msg);
+    unsigned char * handle_msg(unsigned char const* msg, int bytes_received, int * byte_sending);
 
+    void withdrawn_nb_from_rt(int as_name);
     void self_advertise();
     void transfer_add_route(update_msg);
     void run();

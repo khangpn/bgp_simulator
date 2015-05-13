@@ -49,7 +49,7 @@ void As::setup_as(string as_config) {
   }
 }
 
-map<string, string> As::setup_neighbours(string neighbours_config)
+map<int, string> As::setup_neighbours(string neighbours_config)
 {
   /* Setup AS links */
   // Read configuration file
@@ -65,11 +65,14 @@ map<string, string> As::setup_neighbours(string neighbours_config)
 	  while(getline(config_file, line))
 	  {
 	    stringstream lineStream(line);
-	    string nb_name;
+	    string tmp_name;
 	    string nb_port;
-	    std::getline(lineStream, nb_name, ',');
+	    std::getline(lineStream, tmp_name, ',');
 	    std::getline(lineStream, nb_port, ',');
+
+      int nb_name = std::stoi(tmp_name);
 	    neighbours[nb_name] = nb_port;
+	    //neighbours_state[nb_name] = 0;
 	    neighbours_state[nb_name] = 0;
 	  }
 	  config_file.close();
@@ -124,13 +127,9 @@ void As::setup_listener()
 void As::keep_alive() 
 {
   while(true) {
-    // Send UPDATE msg to self advertise
-    thread advertise_thread(&As::self_advertise, this);
-    advertise_thread.detach();
-
-    for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
-      if (it->second == 1) {
-        string as_name = it->first;
+    for (map<int, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
+      if (it->second == NB_ON) {
+        int as_name = it->first;
 
         if (neighbours.find(as_name) != neighbours.end()) {
           // Convert string to char[]
@@ -139,10 +138,15 @@ void As::keep_alive()
 
           int size = 0;
           unsigned char *msg = As::generate_KEEPALIVE(&size);
-          bgp_send(port, msg, size);
+          int status = bgp_send(port, msg, size);
           free(msg);
           cout << "=======================" << endl;
           cout << "KEEPALIVE SENT TO: " << port << endl;
+
+          if (status == -1) {
+            As::switch_neighbour(as_name, NB_OFF);
+            As::withdrawn_nb_from_rt(as_name);
+          }
         }
       }
     } 
@@ -152,16 +156,25 @@ void As::keep_alive()
 
 void As::send_OPEN() 
 {
-  for (map<string, string>::iterator it=neighbours.begin(); it!=neighbours.end(); ++it) {
-    char port[10];
-    strcpy(port, it->second.c_str());
+  while (true) {
+    for (map<int, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
+      if (it->second == NB_OFF) {
+        int as_name = it->first;
 
-    int size = 0;
-    unsigned char *msg = As::generate_OPEN(&size);
-    bgp_send(port, msg, size);
-    free(msg);
-    cout << "=======================" << endl;
-    cout << "OPEN SENT TO: " << port << endl;
+        if (neighbours.find(as_name) != neighbours.end()) {
+          char port[10];
+          strcpy(port, neighbours[as_name].c_str());
+
+          int size = 0;
+          unsigned char *msg = As::generate_OPEN(&size);
+          int status = bgp_send(port, msg, size);
+          free(msg);
+          cout << "=======================" << endl;
+          cout << "OPEN SENT TO: " << port << endl;
+        }
+      }
+    } 
+    sleep(3);
   } 
 }
 
@@ -324,7 +337,7 @@ As::update_msg As::deserialize_UPDATE(unsigned char *update_stream) {
   return msg_update;
 }
 
-unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_received) {
+unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_received, int * size) {
   unsigned char *msg_return, status[1];
   if (bytes_received >= HEADER_LENGTH) {
     unsigned char *msg_header = (unsigned char *)malloc(HEADER_LENGTH);
@@ -337,18 +350,18 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
     // Handle OPEN msg
     if (header_str.type == OPEN_TYPE) {
       open_msg open_str = deserialize_OPEN(msg_body);
-      string as_name = to_string((int)open_str.my_as);
+      //string as_name = to_string((int)open_str.my_as);
+      int as_name = (int)open_str.my_as;
+      As::switch_neighbour(as_name, NB_ON);
 
-      if (neighbours_state.find(as_name) != neighbours_state.end()) {
-        neighbours_state[as_name] = 1; // update the neighbour state, switch to on
-        cout << "=======================" << endl;
-        cout << "NEIGHBOUR STATE UPDATED: " << as_name << " - " << neighbours_state[as_name] << endl;
-      }
+      // Send back an OPEN msg
+      msg_return = As::generate_OPEN(size);
     }
     // Handle UPDATE msg
     if (header_str.type == UPDATE_TYPE) {
       update_msg update_str = deserialize_UPDATE(msg_body);
       if ((int)update_str.withdrawn_length > 0) {
+        As::remove_route(update_str);
       }
       if ((int)update_str.path_length > 0) {
         As::add_route(update_str, 0);
@@ -356,20 +369,43 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
         transfer_thread.detach();
       }
       As::rt.print_table();
+      *size = 1;
+      status[0] = 0;
+      msg_return = status;
     }
 
     free(msg_body);
+  } else {
+    *size = 1;
+    status[0] = -1;
+    msg_return = status;
   }
 
-  status[0] = 0;
-  msg_return = status;
   return msg_return;
+}
+
+void As::switch_neighbour(int as_name, int state) {
+  if (neighbours_state.find(as_name) != neighbours_state.end()) {
+    neighbours_state[as_name] = state;
+    cout << "=======================" << endl;
+    cout << "NEIGHBOUR STATE UPDATED: " << as_name << " - " << neighbours_state[as_name] << endl;
+  }
 }
 
 void As::add_route(update_msg msg_update, int priority = 0){
   int path_length = (int)msg_update.path_length;
   int as_name = (int)msg_update.path_value[0]; // The first node is the target AS
   As::rt.addRoute(as_name, path_length, msg_update.path_value, priority);
+
+  As::rt.print_table();
+}
+
+void As::remove_route(update_msg msg_update) {
+  int path_length = (int)msg_update.path_length;
+  int as_name = (int)msg_update.path_value[0]; // The first node is the target AS
+  As::rt.removeRoute(as_name, path_length, msg_update.path_value);
+
+  As::rt.print_table();
 }
 
 void As::transfer_add_route(update_msg msg_update) {
@@ -385,14 +421,15 @@ void As::transfer_add_route(update_msg msg_update) {
   unsigned char *msg= As::generate_UPDATE(&msg_size, msg_update);
 
 
-  for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
-    if (it->second == 1) {
-      int as_name = stoi(it->first);
+  for (map<int, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
+    if (it->second == NB_ON) {
+      //int as_name = stoi(it->first);
+      int as_name = it->first;
       if (as_name != target && as_name != sender) {
-        if (neighbours.find(it->first) != neighbours.end()) {
+        if (neighbours.find(as_name) != neighbours.end()) {
           char port[10];
           strcpy(port, neighbours[it->first].c_str());
-          bgp_send(port, msg, msg_size);
+          int status = bgp_send(port, msg, msg_size);
           cout << "=======================" << endl;
           cout << "UPDATE SENT TO: " << port << endl;
         }
@@ -403,31 +440,45 @@ void As::transfer_add_route(update_msg msg_update) {
   free(msg);
 }
 
-void As::self_advertise() {
+void As::withdrawn_nb_from_rt(int as_name) {
   update_msg new_update_msg; 
-  new_update_msg.path_length = 1;
-  new_update_msg.path_value = (unsigned char *) malloc(1);
-  new_update_msg.path_value[0] = As::name;
-  //cout << "UPDATE INITIAL PATH_VALUE: " << (int)new_update_msg.path_value[0] << endl;
-  
-  int msg_size = 0;
-  unsigned char *msg= As::generate_UPDATE(&msg_size, new_update_msg);
+  new_update_msg.withdrawn_length = 1;
+  new_update_msg.withdrawn_route = (unsigned char *) malloc(1);
+  new_update_msg.withdrawn_route[0] = as_name;
+  As::remove_route(new_update_msg);
 
-  free(new_update_msg.path_value);
+  As::rt.print_table();
+}
 
-  for (map<string, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
-    if (it->second == 1) {
-      string as_name = it->first;
-      if (neighbours.find(as_name) != neighbours.end()) {
-        char port[10];
-        strcpy(port, neighbours[as_name].c_str());
-        bgp_send(port, msg, msg_size);
-        cout << "=======================" << endl;
-        cout << "UPDATE SENT TO: " << port << endl;
+void As::self_advertise() {
+  while (true) {
+    for (map<int, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
+      if (it->second == NB_ON) {
+        update_msg new_update_msg; 
+        new_update_msg.path_length = 1;
+        new_update_msg.path_value = (unsigned char *) malloc(1);
+        new_update_msg.path_value[0] = As::name;
+        //cout << "UPDATE INITIAL PATH_VALUE: " << (int)new_update_msg.path_value[0] << endl;
+        
+        int msg_size = 0;
+        unsigned char *msg= As::generate_UPDATE(&msg_size, new_update_msg);
+
+        free(new_update_msg.path_value);
+
+        int as_name = it->first;
+        if (neighbours.find(as_name) != neighbours.end()) {
+          char port[10];
+          strcpy(port, neighbours[as_name].c_str());
+          int status = bgp_send(port, msg, msg_size);
+          cout << "=======================" << endl;
+          cout << "UPDATE SENT TO: " << port << endl;
+        }
+
+        free(msg);
       }
-    }
-  } 
-  free(msg);
+    } 
+    sleep(3);
+  }
 }
 
 void As::run() {
@@ -437,7 +488,13 @@ void As::run() {
   //thread KEEPALIVE_thread(&As::keep_alive, this);
   //KEEPALIVE_thread.detach();
 
-  As::send_OPEN();
+  thread open_thread(&As::send_OPEN, this);
+  open_thread.detach();
+
+  // Send UPDATE msg to self advertise
+  thread advertise_thread(&As::self_advertise, this);
+  advertise_thread.detach();
+
   As::keep_alive();
 }
 

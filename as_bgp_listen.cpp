@@ -84,33 +84,32 @@ void As::bgp_listen(char *port)
     /* Receiving message */
     std::cout << "Waiting to receive data..."  << std::endl;
     ssize_t bytes_received;
-    unsigned char incomming_data_buffer[INCOMING_DATA_BUFFER_SIZE];
-    bytes_received = recv(new_sd, incomming_data_buffer,INCOMING_DATA_BUFFER_SIZE, 0);
+    unsigned char incoming_data_buffer[INCOMING_DATA_BUFFER_SIZE];
+    bytes_received = recv(new_sd, incoming_data_buffer,INCOMING_DATA_BUFFER_SIZE, 0);
     // If no data arrives, the program will just wait here until some data arrives.
     if (bytes_received == 0) std::cout << "host shut down." << std::endl ;
     if (bytes_received == -1)std::cout << "receive error!" << std::endl ;
     std::cout << bytes_received << " bytes received : ";// << std::endl ;
-    if ( bytes_received >= 0 ) {
-        //incomming_data_buffer[ bytes_received ] = '\0';
+    if ( bytes_received > 0 ) {
+        //incoming_data_buffer[ bytes_received ] = '\0';
         //NOTE: need to write the handler for  every message type
-        //std::cout << incomming_data_buffer << std::endl;
+        //std::cout << incoming_data_buffer << std::endl;
         //for (int i = 0; i <  bytes_received; i++) {
         //  if (i >= 16) {
-        //    cout << (int)incomming_data_buffer[i] << endl;
+        //    cout << (int)incoming_data_buffer[i] << endl;
         //  } else {
-        //    cout << incomming_data_buffer[i] << endl;
+        //    cout << incoming_data_buffer[i] << endl;
         //  }
         //}
-        unsigned char * msg_return = As::handle_msg(incomming_data_buffer, bytes_received);
+        int len = 0;
+        unsigned char * msg_return = As::handle_msg(incoming_data_buffer, bytes_received, &len);
 
         /* Sending message */
-        if ((int)*msg_return == 0) {
-          std::cout << "send()ing message..."  << std::endl;
-          char msg[] = "Hi! I got your msg.";
-          int len;
+        if ((int)*msg_return != -1) {
+          //std::cout << "send()ing message..."  << std::endl;
+          //char msg[] = "Hi! I got your msg.";
           ssize_t bytes_sent;
-          len = strlen(msg);
-          bytes_sent = send(new_sd, msg, len, 0);
+          bytes_sent = send(new_sd, msg_return, len, 0);
         }
         /* ========== END ========== */
     }
@@ -118,8 +117,8 @@ void As::bgp_listen(char *port)
     	std::cout << "### ERROR IN bytes_received" << std::endl;
     }
 /*JH
- if ( is_valid_IPv4_packet( incomming_data_buffer, bytes_recieved ) )
- switch BGP_type( incomming_data_buffer, bytes_recieved )
+ if ( is_valid_IPv4_packet( incoming_data_buffer, bytes_recieved ) )
+ switch BGP_type( incoming_data_buffer, bytes_recieved )
  {
  	 case KEEPALIVE:
  	 case UPDATE:
