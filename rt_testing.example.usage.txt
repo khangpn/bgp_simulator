@@ -1,0 +1,36 @@
+
+
+Example compile & run:
+
+g++ -std=c++11 -lpthread rt_testing.cpp -o rt_test && ( ./rt_test | less ) 
+
+Example output:
+
+Testing unix for rt.cpp
+	#define VERBOSE 4 for maximum debug output, 0 for minimum (now set to:0)Routing table:
+ASNAME	|pri.	|ASPATH
+12345	|1	|12345 2 4 3
+12346	|1	|12346 4 2 3
+42	|2	|42 4 2 3
+00500	|2	|500 4 2 3
+00502	|2	|502 4 2 3
+00503	|3	|503 4 2 3
+00501	|1	|501 4 2 3
+10500	|0	|10500 3
+10500	|0	|10500 3
+01001	|0	|1001 1 1 2 4
+01002	|1	|1002 1 1 2 4
+01003	|0	|1003 1 1 2 4
+01004	|10	|1004 1 1 2 4
+01005	|10	|1005 1 1 4
+01006	|10	|1006 1 1 4
+Current routeTable route count: 15
+ASPATH query result for "2": 1004
+ASPATH query result for 2: 1004
+ASPATH query result for 3: 10500
+ASPATH query result for 503: 503
+ASPATHlength testing: 3 56 3 20500, 4 (1)
+ASPATHlength testing: 3 3 3 3, 4 (1)
+ASPATHlength testing: , 0 (1)
+ASPATHlength testing: 1, 1 (1)
+ASPATHlength testing: 3 56 3 20500 1 1 1 1 1, 9 (1)

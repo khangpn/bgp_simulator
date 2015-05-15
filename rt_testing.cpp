@@ -1,4 +1,4 @@
-#define VERBOSE 4
+#define VERBOSE 0
 
 #include "rt.cpp"
 
@@ -10,6 +10,10 @@
 
 int main(void)
 {
+
+	printf("Testing unix for rt.cpp\n");
+	printf("\t#define VERBOSE 4 for maximum debug output, 0 for minimum (now set to:%i)", VERBOSE );
+
 	routeTable myRouteTable; // create and initiaize route table
 
 	// set up some routes for testing (these may do not make sense now):
@@ -18,7 +22,7 @@ int main(void)
 	myRouteTable.addRoute(ASID, ASPATH, 0xF000, 8, 	0x8844, 0x2344, 1);
 	ASID = "12346"; ASPATH = "12346 4 2 3";
 	myRouteTable.addRoute(ASID, ASPATH, 0xFF00, 16, 0x1000, 0x2344, 1);
-	ASID = "00042"; ASPATH = "42 4 2 3";
+	ASID = "42"; ASPATH = "42 4 2 3";
 	myRouteTable.addRoute(ASID, ASPATH, 0xFF00, 16, 0x2000, 0x2344, 2);
 
 
@@ -39,6 +43,12 @@ int main(void)
 
 	// set up trust-enabled route (with trust parameter):
 	myRouteTable.addRoute(ASID, ASPATH, 0xFFFFFFFF,  0, 0x11223344, 0xFFFFFFFF, 0, 1000);
+	myRouteTable.addRoute(1001, "1001 1 1 2 4", 0, 0);
+	myRouteTable.addRoute(1002, "1002 1 1 2 4", 1, 0);
+	myRouteTable.addRoute(1003, "1003 1 1 2 4", 0, 1);
+	myRouteTable.addRoute(1004, "1004 1 1 2 4", 10, 1);
+	myRouteTable.addRoute(1005, "1005 1 1 4", 10, 1);
+	myRouteTable.addRoute(1006, "1006 1 1 4", 10, 0);
 
 	// test the other routines:
 
@@ -51,13 +61,15 @@ int main(void)
 	// routeQuery:
 	//cout << "Route query result for X: " << myRouteTable.queryRoute(0x000F) << "." << endl;
 
-	int mydest = 0x55555555;
-	printf( "NextHop query result for %x: %x\n", mydest, myRouteTable.queryRoute( mydest ) );
+	//int mydest = 0x55555555;
+	//printf( "NextHop query result for %x: %x\n", mydest, myRouteTable.queryRoute( mydest ) );
 	// should print  0x22550033 for dest 0x55555555 (pri is 3)
 
 	//int mydest = 0x55555555;
 	cout << "ASPATH query result for \"2\"" << ": " << myRouteTable.queryNextHop( "2" ) << endl;
 	cout << "ASPATH query result for 2" << ": " << myRouteTable.queryNextHop( 2 ) << endl;
+	cout << "ASPATH query result for 3" << ": " << myRouteTable.queryNextHop( 3 ) << endl;
+	cout << "ASPATH query result for 503" << ": " << myRouteTable.queryNextHop( 503 ) << endl;
 
 	string ASPATHtestString; int ASPATHtestResult;
 	ASPATHtestString = "3 56 3 20500"; ASPATHtestResult=4;

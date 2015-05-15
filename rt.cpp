@@ -26,13 +26,15 @@
 
 using namespace std;
 
-// for inet_pton-related usage examples...
+// for inet_pton-related usage examples:
 #include <sys/types.h>
 
-//... ...
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+/**
+ * Convert IP address in text format to 4 byte int format (IPv4)
+ */
 int IPaddress2int(const char *IPaddress)
 {
 	int IPint = 0;
@@ -40,9 +42,15 @@ int IPaddress2int(const char *IPaddress)
 	return IPint;
 
 	//printf("%s\n", str); // prints "192.0.2.33"
+
 } // IPaddress2int
 
-void printIPint(int IPint) // TO-DO! memory allocation in C sucks
+/**
+ * Prints an IP address to stdout
+ * @param int IPint IPv4 address
+ * @returns -
+ */
+void printIPint(int IPint)
 {
 	struct sockaddr_in sa;
 	//char str[INET_ADDRSTRLEN]; http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#inet_ntopman
@@ -54,6 +62,35 @@ void printIPint(int IPint) // TO-DO! memory allocation in C sucks
 	printf("%s\n", str); // prints "192.0.2.33"
 } // printIPint
 
+/**
+ * Convert int to string
+ * There should be better ways to do this.
+ * @param int
+ * @returns string
+ */
+string int2str( int i )
+{
+	string s;
+	char temp[6];
+	sprintf(temp, "%i", i);
+	s = temp;
+	return s;
+}
+
+/**
+ * Convert int to string with formatting of 5 character ASPATH
+ * There should be better ways to do this.
+ * @param int
+ * @returns string
+ */
+string int2ASPATHstr( int i )
+{
+	string s;
+	char temp[6];
+	sprintf(temp, "%05i", i);
+	s = temp;
+	return s;
+}
 
 
 class routeTable
@@ -96,6 +133,7 @@ routeTable() {
 
 ~routeTable(){};// Destructor
 
+int addRoute(int ASNAME, string ASPATH, int priority, int trust);
 int addRoute(string ASNAME, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority);
 int addRoute(string ASNAME, string ASPATH, unsigned int mask, unsigned int prefixlen, unsigned int nextHop, unsigned int target, int priority,
 			unsigned int trust);
@@ -104,8 +142,9 @@ void printTableASPATH();
 int ASPATHlength(string ASPATH);
 int queryNextHop(string destinationASNAME);
 int queryNextHop(int destinationASNAME);
-string queryASPATH(int destinationIP);
+string queryASPATHbyIP(int destinationIP);
 int queryRoute(int destination);
+void deleteRouteByASNAME( int ASNAME );
 int deleteRoute();
 int routeCount();
 };
@@ -116,7 +155,25 @@ int routeCount();
 }*/
 
 /*
- *
+ * The int-version of addRoute
+ * @param int			ASNAME
+ * @param string		ASPATH
+ * @param int priority	set to zero if no need
+ * @param int trust		set to zero if no need
+ * @returns routing table size
+ */
+int routeTable::addRoute(int ASNAME, string ASPATH, int priority, int trust)
+{
+	string ASNAMEstr;
+	ASNAMEstr = int2ASPATHstr(ASNAME);
+	return addRoute( ASNAMEstr, ASPATH,0,0,0,0,priority, trust);
+}
+
+/*
+ * add route to routing table, with trust set to zero (it's OK to leave trust unset)
+ * @param string ASNAME - MUST BE FORMATTED AS "%05i", i.e. 42 must be 00042
+ * @param ...
+ * @return routing table index for the route just added
  */
 int routeTable::addRoute(string ASNAME, string ASPATH,
 							unsigned int mask,
@@ -144,6 +201,9 @@ int routeTable::addRoute(string ASNAME, string ASPATH,
 
 /*
  * add route to routing table, with trust
+ * @param string ASNAME - MUST BE FORMATTED AS "%05i", i.e. 42 must be 00042
+ * @param ...
+ * @return routing table index for the route just added
  */
 int routeTable::addRoute(string ASNAME, string ASPATH,
 							unsigned int mask,
@@ -166,6 +226,16 @@ int routeTable::addRoute(string ASNAME, string ASPATH,
 } // ::addRoute (with trust)
 
 /**
+ * Delete route with given ASNAME (all routes)
+ * @param int ASNAME
+ */
+void routeTable::deleteRouteByASNAME( int ASNAME )
+{
+	//TODO: the actual deletion
+
+}
+
+/**
  *
  * @name    printTableASPATH
  * @brief  	Ouput routing table, with each line: ASNAME ASPATH PRIORITY
@@ -184,6 +254,9 @@ void routeTable::printTableASPATH( string separator )
 	routingItem_t rtRow; // to be used in iterations and comparisons
 	//string separator = "\t";
 	string paddedASPATH;
+
+	cout << "Routing table:\n";
+	cout << "ASNAME" << separator << "pri." << separator << "ASPATH" << endl;
 
 	for (ri = 0; ri < rt.items; ri++)
 	{
@@ -221,7 +294,7 @@ int routeTable::ASPATHlength(string ASPATH)
 		if ( ASPATH[i]==' ' )
 			wordCount++;
 	return wordCount;
-} // ::ASPATHlenth
+} // ::ASPATHlength
 
 /**
  *
@@ -302,12 +375,16 @@ int routeTable::queryNextHop(string destinationASNAME)
 	//i = stoi( rtRowBest.ASNAME, nullptr, 10 ); // why not working: http://www.cplusplus.com/reference/string/stoi/
 	i = atoi( rtRowBest.ASNAME.c_str() );
 	// return rtRowBest.ASNAME;
-	return i;
-}
+	return i; // returns ASNAME as int
+}// ::queryNextHop(string
 
-// convert paramater to string and call queryNextHop with that string
+/**
+ * @returns the first ASNAME of ASPATH that has the given parameter
+ */
 int routeTable::queryNextHop(int destinationASNAME)
 {
+	// convert paramater to string and call queryNextHop with that string
+
 	string s;
 	char temp[6];
 	//s = itos( rtRowBest.ASNAME.c_str() );// why not working?
@@ -321,7 +398,7 @@ int routeTable::queryNextHop(int destinationASNAME)
 
 /**
  *
- * @name    queryASPATH
+ * @name    queryASPATHbyIP
  * @brief  	What is the ASPATH for given neighbor IP address
  * @ingroup routeTable
  *
@@ -331,9 +408,9 @@ int routeTable::queryNextHop(int destinationASNAME)
  *
  * @retval string Returns ASPATH for given neighbour router, or NULL if there is a problem deciding the ASPATH
  *
- * TO-DO: actual implementation - now only "dummy" implementation, now gives the first item ASPATH in routing table for testing purposes
+ * TODO: actual implementation - now only "dummy" implementation, now gives the first item ASPATH in routing table for testing purposes
  */
-string routeTable::queryASPATH(int destinationIP)
+string routeTable::queryASPATHbyIP(int destinationIP)
 {
 	if ( rt.items > 0)
 		return rt.ri[0].ASPATH; // initially just sent any valid ASNAME from the RT
@@ -341,7 +418,7 @@ string routeTable::queryASPATH(int destinationIP)
 	{
 		return NULL;
 	}
-}
+} // ::queryASPATHbyIP
 
 
 /**
