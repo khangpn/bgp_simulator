@@ -1,18 +1,23 @@
+/**
+ * Testing unit for routing table (for rt.cpp)
+ *
+ * Compile and use example:
+ * 		g++ -o rt_test rt_testing.cpp -std=c++11 && (./rt_test | less )
+ * @file   rt_testing.cpp
+ * @Author Jussi Heino (juhehe@utu.fi)
+ * @date   Feb-May 2015
+ */
+
 #define VERBOSE 0
 
 #include "rt.cpp"
-
-
-/**
- * Testing unit for rt.cpp
- * Compile example: g++ -o rt_testing rt_testing.cpp -std=c++0x
- */
 
 int main(void)
 {
 
 	printf("Testing unix for rt.cpp\n");
 	printf("\t#define VERBOSE 4 for maximum debug output, 0 for minimum (now set to:%i)", VERBOSE );
+	printf("\n");
 
 	routeTable myRouteTable; // create and initiaize route table
 

@@ -1,7 +1,7 @@
 /**
  * @file   rt.cpp
  * @Author Jussi Heino (juhehe@utu.fi
- * @date   Feb 2015
+ * @date   Feb-May 2015
  * @brief  Route Table class impements a Internet routing table data structure and methods
  *
  * You can add routes to routing table.
