@@ -84,46 +84,25 @@ map<int, string> As::setup_neighbours(string neighbours_config)
 
 }
 
+/**
+ *  Setup AS server
+ */
 void As::setup_listener()
 {
-  /* Setup AS server */
-  // Read configuration file
-  //string port;
-  //ifstream config_file;
-  //config_file.open( as_config );
-  //if ( config_file.is_open() ) {
-	//  getline(config_file, port);
-	//  config_file.close();
-
-	//  // Convert string to char[]
-	//  char listen_port[10];
-	//  strcpy(listen_port, port.c_str());
-
-	//  // simple consistency checks for port read from file
-	//  if ( strlen(listen_port)<6 )
-	//	  if ( atoi(listen_port) > 0 )
-	//		  if ( atoi(listen_port) < 65536 )
-	//			  bgp_listen(listen_port);
-	//  	  	  // to-do: else
-
-	//  config_file.close();
-  //}
-  //else { // config file cannot be opened
-	//  fprintf(stderr, "### Config file %s open error", as_config.c_str());
-  //}
-    /* ========== END ========== */
-
   cout << ">>> Setting up listener..." << endl;
-	// Convert string to char[]
-	char listen_port[10];
-	strcpy(listen_port, As::port.c_str());
-  cout << "Listening port: " << listen_port << endl;
+  char listen_port[10];
+  strcpy(listen_port, As::port.c_str());
 
-	// simple consistency checks for port read from file
-	if ( strlen(listen_port)<6 )
-		if ( atoi(listen_port) > 0 )
-			if ( atoi(listen_port) < 65536 )
-				bgp_listen(listen_port);
+  // simple consistency checks for port read from file
+  if ( ( strlen(listen_port)<6 )
+	&& ( atoi(listen_port) > 0 )
+	&& ( atoi(listen_port) < 65536 ) ) {
+	  cout << "Listening port: " << listen_port << endl;
+	  bgp_listen(listen_port);
+	}
+	else {
+	  cout << "ERROR: Listen port syntax error."<< endl;
+	}
 }
 
 void As::keep_alive() 
