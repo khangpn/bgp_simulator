@@ -88,6 +88,13 @@ int main(void)
 	ASPATHtestString = "3 56 3 20500 1 1 1 1 1"; ASPATHtestResult=9;
 	printf("ASPATHlength testing: %s, %i (%i)\n", ASPATHtestString.c_str(), myRouteTable.ASPATHlength(ASPATHtestString), (ASPATHtestResult==myRouteTable.ASPATHlength(ASPATHtestString)) );
 
+	printf("\nIP checksum testing:\n");
+	const char packet[] = {0x01,0x00,'\xF2',0x03, '\xf4','\xf5','\xf6','\xf7', 0x00, 0x00 };
+	printf("IP Checksum: %4x (should be 210E as in lec. notes)\n", IPchecksum(packet, sizeof(packet) ) );
+	const char packet2[] = {0x01,0x00,'\xF2',0x03, '\xf4','\xf5','\xf6','\xf7', 0x21, 0x0E };
+	printf("IP Checksum test2a: %4x (should be 0 i.e. 0x0000)\n", IPchecksum(packet2, sizeof(packet2) ) );
+	printf("IP Checksum test2b: %4x (should be 1 i.e. TRUE)\n", IPchecksumTest(packet2, sizeof(packet2) ) );
+
 	// routeDelete:
 	// not yet
 
