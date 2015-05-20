@@ -157,6 +157,7 @@ void printTableASPATH(string separator);
 void printTableASPATH();
 int ASPATHlength(string ASPATH);
 int queryRoute(string destinationASNAME);
+int queryRoute(const char *destinationASNAME);
 int queryRoute(int destinationASNAME);
 string queryASPATHbyIP(int destinationIP);
 int queryRouteIP(int destination);
@@ -411,6 +412,16 @@ int routeTable::queryRoute(int destinationASNAME)
 	return queryRoute( s );
 } // ::queryRoute(int)
 
+int routeTable::queryRoute(const char *destinationASNAME)
+{
+	string ASNAME;
+
+	// convert input char* to string for query
+	ASNAME.assign( destinationASNAME );
+
+	// query route
+	return queryRoute( ASNAME );
+} // ::queryRoute(const char *)
 
 /**
  *

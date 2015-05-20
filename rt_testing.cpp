@@ -74,10 +74,15 @@ int main(void)
 	// should print  0x22550033 for dest 0x55555555 (pri is 3)
 
 	//int mydest = 0x55555555;
-	cout << "ASPATH query result for \"2\"" << ": " << myRouteTable.queryRoute( "2" ) << endl;
+	cout << "ASPATH query result for string 2" << ": " << myRouteTable.queryRoute( "2" ) << endl;
+	cout << "ASPATH query result for string 503" << ": " << myRouteTable.queryRoute( "503" ) << endl;
 	cout << "ASPATH query result for 2" << ": " << myRouteTable.queryRoute( 2 ) << endl;
 	cout << "ASPATH query result for 3" << ": " << myRouteTable.queryRoute( 3 ) << endl;
 	cout << "ASPATH query result for 503" << ": " << myRouteTable.queryRoute( 503 ) << endl;
+	//cout << "ASPATH query with char*:" << endl;
+	cout << "ASPATH query result for \'2\'" << ": " << myRouteTable.queryRoute( '2' ) << endl;
+	char ASs1[]= "2";cout << "ASPATH query result for char* 2" << ": " << myRouteTable.queryRoute( ASs1 ) << endl;
+	char ASs2[]= "503";cout << "ASPATH query result for char* 503" << ": " << myRouteTable.queryRoute( ASs2 ) << endl;
 
 	string ASPATHtestString; int ASPATHtestResult;
 	ASPATHtestString = "3 56 3 20500"; ASPATHtestResult=4;
