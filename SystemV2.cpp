@@ -58,6 +58,7 @@ public:
 
 	void Network::removeRouter( Router router ) {
 		// add (link) to Router
+
 	}
 
 }; // class Network

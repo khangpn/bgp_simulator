@@ -8,9 +8,12 @@
  * @date   Feb-May 2015
  */
 
+// set VERBOSE to zero to provide no informational or debug output
+// set to 4 to include maximum amount of informational and debug output
 #define VERBOSE 0
 
 #include "rt.cpp"
+#include "ip_packet.cpp"
 
 int main(void)
 {
@@ -64,17 +67,17 @@ int main(void)
 	cout << "Current routeTable route count: " << myRouteTable.routeCount() << endl;
 
 	// routeQuery:
-	//cout << "Route query result for X: " << myRouteTable.queryRoute(0x000F) << "." << endl;
+	//cout << "Route IP query result for 0x000F: " << myRouteTable.queryRouteIP(0x000F) << "." << endl;
 
 	//int mydest = 0x55555555;
 	//printf( "NextHop query result for %x: %x\n", mydest, myRouteTable.queryRoute( mydest ) );
 	// should print  0x22550033 for dest 0x55555555 (pri is 3)
 
 	//int mydest = 0x55555555;
-	cout << "ASPATH query result for \"2\"" << ": " << myRouteTable.queryNextHop( "2" ) << endl;
-	cout << "ASPATH query result for 2" << ": " << myRouteTable.queryNextHop( 2 ) << endl;
-	cout << "ASPATH query result for 3" << ": " << myRouteTable.queryNextHop( 3 ) << endl;
-	cout << "ASPATH query result for 503" << ": " << myRouteTable.queryNextHop( 503 ) << endl;
+	cout << "ASPATH query result for \"2\"" << ": " << myRouteTable.queryRoute( "2" ) << endl;
+	cout << "ASPATH query result for 2" << ": " << myRouteTable.queryRoute( 2 ) << endl;
+	cout << "ASPATH query result for 3" << ": " << myRouteTable.queryRoute( 3 ) << endl;
+	cout << "ASPATH query result for 503" << ": " << myRouteTable.queryRoute( 503 ) << endl;
 
 	string ASPATHtestString; int ASPATHtestResult;
 	ASPATHtestString = "3 56 3 20500"; ASPATHtestResult=4;

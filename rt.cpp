@@ -109,51 +109,6 @@ string int2ASPATHstr( int i )
 	return s;
 }
 
-/**
- * Calculate IP header checksum with "Internet checksum" algorithm
- * @param buf
- * @param size
- * @returns Internet checksum for size sized char buffer buf
- */
-unsigned int IPchecksum(const char *buf, unsigned int size)
-{
-	unsigned int sum = 0;
-	unsigned short uint16 = 0; // TODO could be integrated into summing in for?
-
-	// checksum with 16-bit pieces
-	for ( int i = 0; i < size >> 1; i++ )
-	{
-		// think about byte order
-		uint16 = buf[i<<1]&0xFF;
-		uint16 += buf[1+(i<<1)]<<8;
-		sum += uint16;
-	}
-
-	// single byte at the end? (odd size) (not tested!)
-	if ( size & 0x0001 )
-	{
-		sum += buf[size] &0xFF;
-	}
-
-	sum = (sum >> 16) + (sum &0xFFFF); // sum MSW and LSW
-
-	sum = H2N(sum); // byte order swap here or elsewhere?
-	return (~sum & 0xFFFF);
-}
-/*
- * Tests if the Internet checksum of input buffer is correct
- * @param buf
- * @param size
- * @return boolean
- */
-unsigned int IPchecksumTest(const char *buf, unsigned int size)
-{
-	// lecture notes compare to 0xFFFF, but
-	// correct packet internet checksum testing is 0xFFFF before inverse,
-	// when inversed 0x0000 is correct result!
-	return ( 0x0000 == IPchecksum(buf, size) );
-}
-
 class routeTable
 {
 // currently hard-coded limit for 1000 routes, I will implement dynamic allocation using e.g. <vector>
@@ -201,10 +156,10 @@ int addRoute(string ASNAME, string ASPATH, unsigned int mask, unsigned int prefi
 void printTableASPATH(string separator);
 void printTableASPATH();
 int ASPATHlength(string ASPATH);
-int queryNextHop(string destinationASNAME);
-int queryNextHop(int destinationASNAME);
+int queryRoute(string destinationASNAME);
+int queryRoute(int destinationASNAME);
 string queryASPATHbyIP(int destinationIP);
-int queryRoute(int destination);
+int queryRouteIP(int destination);
 void deleteRouteByASNAME( int ASNAME );
 int deleteRoute();
 int routeCount();
@@ -359,7 +314,7 @@ int routeTable::ASPATHlength(string ASPATH)
 
 /**
  *
- * @name    queryNextHop
+ * @name    queryRoute
  * @brief  	What is the next hop for given ASNAME
  * @ingroup routeTable
  *
@@ -371,7 +326,7 @@ int routeTable::ASPATHlength(string ASPATH)
  * @retval int ASNAME
  *
  */
-int routeTable::queryNextHop(string destinationASNAME)
+int routeTable::queryRoute(string destinationASNAME)
 {
 	int ri;
 	int resultDst = 0; // used for result destination IP, init with 0
@@ -437,12 +392,12 @@ int routeTable::queryNextHop(string destinationASNAME)
 	i = atoi( rtRowBest.ASNAME.c_str() );
 	// return rtRowBest.ASNAME;
 	return i; // returns ASNAME as int
-}// ::queryNextHop(string
+}// ::queryRoute(string
 
 /**
  * @returns the first ASNAME of ASPATH that has the given parameter
  */
-int routeTable::queryNextHop(int destinationASNAME)
+int routeTable::queryRoute(int destinationASNAME)
 {
 	// convert paramater to string and call queryNextHop with that string
 
@@ -453,8 +408,8 @@ int routeTable::queryNextHop(int destinationASNAME)
 	// itoa(destinationASNAME, temp, 10); // oh this rquires stdlib.h?
 	sprintf(temp, "%i", destinationASNAME); // this to, but is standard #include <stdio.h>
 	s = temp;
-	return queryNextHop( s );
-} // ::queryNextHop(int)
+	return queryRoute( s );
+} // ::queryRoute(int)
 
 
 /**
@@ -486,7 +441,7 @@ string routeTable::queryASPATHbyIP(int destinationIP)
  * returns the AS IP address to send the packet to, for the packet that is on route to destination
  * return -1 on error (his should be rare situation. There should always be a default route, unless you are on the very top.)
  */
-int routeTable::queryRoute(int destination)
+int routeTable::queryRouteIP(int destination)
 {
 	// \to-do { can we be sure there is no thread conflict that changes e.g. rt.items }
 	int ri;
@@ -542,7 +497,7 @@ int routeTable::queryRoute(int destination)
 		else
 			return 0; // if all fails, send "0" -- TO-DO: some error code should be emitted
 	}
-} // ::queryRoute
+} // ::queryRouteIP
 
 /**
  * @name    routeCount
