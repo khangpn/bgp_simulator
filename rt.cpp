@@ -115,8 +115,12 @@ class routeTable
 
 #define RMAX 1000
 
+// set VERBOSE to zero to provide no informational or debug output
+// - set to 4 to include maximum amount of informational and debug output
+// - default value 0
+// - hint: define VERBOSE in your program, may be not change it here
 #ifndef VERBOSE
-#define VERBOSE 3
+#define VERBOSE 0
 #endif
 
 struct routingItem_t
@@ -137,6 +141,8 @@ struct routingTable_t
 	routingItem_t ri[RMAX];
 	int items; // how many table entries in table
 } rt;
+
+int deleteRouteByIndex( int deleteIndex ); // private, no need to call outside
 
 public:
 
@@ -161,8 +167,8 @@ int queryRoute(const char *destinationASNAME);
 int queryRoute(int destinationASNAME);
 string queryASPATHbyIP(int destinationIP);
 int queryRouteIP(int destination);
-void deleteRouteByASNAME( int ASNAME );
-int deleteRoute();
+int deleteRouteByASNAME( int ASNAME );
+int deleteRouteByASPATH( string ASPATH );
 int routeCount();
 };
 
@@ -243,13 +249,56 @@ int routeTable::addRoute(string ASNAME, string ASPATH,
 } // ::addRoute (with trust)
 
 /**
+ * Delete route with given index in routing table (one route)
+ * - decreases routeCount by one
+ * @param int index to routing table
+ * @returns was the process succesful (1) or not (!=1)
+ */
+int routeTable::deleteRouteByIndex( int deleteIndex )
+{
+	if ( deleteIndex > -1 && deleteIndex<rt.items )
+	{
+		rt.ri[deleteIndex] = rt.ri[ --rt.items ];
+		rt.items--;
+		return 1;
+	}
+	else
+		return 0;
+}
+
+/**
  * Delete route with given ASNAME (all routes)
  * @param int ASNAME
+ * @returns the number of routes deleted (0 or more)
  */
-void routeTable::deleteRouteByASNAME( int ASNAME )
+int routeTable::deleteRouteByASNAME( int deleteASNAME )
 {
-	//TODO: the actual deletion
+	string ASNAME = int2ASPATHstr( deleteASNAME ); // convert input to internal representation
+	int routesDeleted = 0; // return value
 
+	for (int ri = 0; ri < rt.items; ri++)
+	{
+		if ( rt.ri[ri].ASNAME == ASNAME )
+			routesDeleted += deleteRouteByIndex(ri);
+	}
+	return routesDeleted;
+}
+
+/**
+ * Delete route with given ASNAME (all routes)
+ * @param string ASPATH
+ * @returns the number of routes deleted (0 or more)
+ */
+int routeTable::deleteRouteByASPATH( string ASPATH )
+{
+	int routesDeleted = 0; // return value
+
+	for (int ri = 0; ri < rt.items; ri++)
+	{
+		if ( rt.ri[ri].ASPATH == ASPATH )
+			routesDeleted += deleteRouteByIndex(ri);
+	}
+	return routesDeleted;
 }
 
 /**

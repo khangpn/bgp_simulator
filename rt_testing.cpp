@@ -8,8 +8,6 @@
  * @date   Feb-May 2015
  */
 
-// set VERBOSE to zero to provide no informational or debug output
-// set to 4 to include maximum amount of informational and debug output
 #define VERBOSE 0
 
 #include "rt.cpp"
@@ -79,7 +77,6 @@ int main(void)
 	cout << "ASPATH query result for 2" << ": " << myRouteTable.queryRoute( 2 ) << endl;
 	cout << "ASPATH query result for 3" << ": " << myRouteTable.queryRoute( 3 ) << endl;
 	cout << "ASPATH query result for 503" << ": " << myRouteTable.queryRoute( 503 ) << endl;
-	//cout << "ASPATH query with char*:" << endl;
 	cout << "ASPATH query result for \'2\'" << ": " << myRouteTable.queryRoute( '2' ) << endl;
 	char ASs1[]= "2";cout << "ASPATH query result for char* 2" << ": " << myRouteTable.queryRoute( ASs1 ) << endl;
 	char ASs2[]= "503";cout << "ASPATH query result for char* 503" << ": " << myRouteTable.queryRoute( ASs2 ) << endl;
@@ -103,8 +100,19 @@ int main(void)
 	printf("IP Checksum test2a: %4x (should be 0 i.e. 0x0000)\n", IPchecksum(packet2, sizeof(packet2) ) );
 	printf("IP Checksum test2b: %4x (should be 1 i.e. TRUE)\n", IPchecksumTest(packet2, sizeof(packet2) ) );
 
-	// routeDelete:
-	// not yet
+	printf("\nRoute deletion testing:\n");
+	printf("deleteRouteByASPATH(%s), deleted routes count: %i\n", "503", myRouteTable.deleteRouteByASPATH("503") );
+	printf("deleteRouteByASNAME(%i), deleted routes count: %i\n", 503, myRouteTable.deleteRouteByASNAME(503) );
+	printf("deleteRouteByASNAME(%i), deleted routes count: %i\n", 503, myRouteTable.deleteRouteByASNAME(503) );
+	printf("deleteRouteByASPATH(%s), deleted routes count: %i\n", "502 4 2 3", myRouteTable.deleteRouteByASPATH("502 4 2 3") );
+	printf("deleteRouteByASNAME(%i), deleted routes count: %i\n", 502, myRouteTable.deleteRouteByASNAME(502) );
+	printf("deleteRouteByASNAME(%i), deleted routes count: %i\n", 1004, myRouteTable.deleteRouteByASNAME(1004) );
+	printf("deleteRouteByASNAME(%i), deleted routes count: %i\n", 1004, myRouteTable.deleteRouteByASNAME(1004) );
+
+	char *testCharpointer;
+	char testConstChar[] ="\tI ";
+	testCharpointer = testConstChar;
+	myRouteTable.printTableASPATH( testCharpointer );
 
 	return 0;
 }
