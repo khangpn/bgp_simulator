@@ -26,6 +26,8 @@ class RoutingTable {
 
   public:
     int getSize() { return RoutingTable::size; }
+    RoutingItem * getItems() { return RoutingTable::items; }
+    RoutingItem getItem(int index) { return RoutingTable::items[index]; }
     void addRoute(int as_name, int path_length, unsigned char * path, int priority);
     void removeRoute(int as_name, int path_length, unsigned char * path);
     void setRoutePriority(int as_name, unsigned char * path, int priority);
@@ -118,6 +120,8 @@ class As {
     void withdrawn_nb_from_rt(int as_name);
     void add_nb_to_rt(int as_name);
     void self_advertise();
-    void transfer_add_route(update_msg);
+    void notify_adding(update_msg);
+    void notify_removing(update_msg);
+    void advertise_routes(int as_name); // send rt items to an AS
     void run();
 };
