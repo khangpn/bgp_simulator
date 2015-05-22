@@ -107,6 +107,11 @@ public:
 	 */
 	void Print();
 	unsigned short getChecksum();
+	Packet deserialize();
+	unsigned char *serialize(); // the checksum will be recalculated
+	unsigned char *getMessage(); // the message payload of Packet
+	void setMessage( unsigned char * message);
+	void setTTL( int newTTL); // will set the IP header TTL value
 };
 
 void Packet::Print()
@@ -162,29 +167,14 @@ public:
 
 }; // class Network
 
-	/*
-	 * Add router to network
-	 */
-	void Network::addRouter( Router router ) {
-		// add (link) to Router
-	}
+/*
+ * Add router to network
+ */
+void Network::addRouter( Router router ) {
+	// add (link) to Router
+}
 
-	void Network::removeRouter( Router router ) {
-		// add (link) to Router
+void Network::removeRouter( Router router ) {
+	// add (link) to Router
 
-	}
-
-
-int main(void)
-{
-#define IP_PACKET 4
-
-	Packet p = Packet(IP_PACKET, 0, 0, 0, 0, 255, 6, 23100, 20500);
-	p.Print();
-	printf("Packet (header) checksum: %4x\n", p.getChecksum() )
-	// TODO make checksum inside header
-	// TODO make proper checksum testing of header with checksum
-
-	// TODO receive & inspect incoming packet (as buf char*)
-	;
 }

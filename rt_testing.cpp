@@ -114,5 +114,8 @@ int main(void)
 	testCharpointer = testConstChar;
 	myRouteTable.printTableASPATH( testCharpointer );
 
+	printf("IPaddress2int testing with 192.0.0.22: %u", IPaddress2int("192.0.0.22"));
+	printf("IPaddress2int testing with 0.0.0.2: %u", IPaddress2int("0.0.0.2"));
+
 	return 0;
 }

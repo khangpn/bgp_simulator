@@ -27,7 +27,7 @@
 /**
  * Convert IP address in text format to 4 byte int format (IPv4)
  */
-int IPaddress2int(const char *IPaddress)
+unsigned int IPaddress2int(const char *IPaddress)
 {
 	int IPint = 0;
 	inet_pton(AF_INET, IPaddress, &IPint ); // &(sa.sin_addr));
@@ -60,7 +60,7 @@ void printIPint(int IPint)
  * @param size
  * @returns Internet checksum for size sized char buffer buf
  */
-unsigned short IPchecksum(const char *buf, unsigned int size)
+unsigned short IPchecksum(char *buf, unsigned int size)
 {
 	unsigned int sum = 0;
 	unsigned short uint16 = 0; // TODO could be integrated into summing in for?
@@ -92,7 +92,7 @@ unsigned short IPchecksum(const char *buf, unsigned int size)
  * @param size
  * @return boolean
  */
-unsigned short IPchecksumTest(const char *buf, unsigned int size)
+unsigned short IPchecksumTest(char *buf, unsigned int size)
 {
 	// lecture notes compare to 0xFFFF, but
 	// correct packet internet checksum testing is 0xFFFF before inverse,
