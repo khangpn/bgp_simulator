@@ -1,10 +1,66 @@
+
+#include <stdio.h>
+
+// for inet_pton-related usage examples:
+#include <sys/types.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+// define for Intel-style processors:
+#define HOST2NETWORK_CONVERSION_NEEDED
+
+// Host to Network 16-bit byte order conversion
+
+#ifdef HOST2NETWORK_CONVERSION_NEEDED
+#define H2N(x) ( ((x&0xFFFF)>>8) + ((x&0xFF)<<8))
+#else
+#define H2N(x) (x)
+#endif
+
+#ifdef HOST2NETWORK_CONVERSION_NEEDED
+#define N2H(x) ( ((x&0xFFFF)>>8) + ((x&0xFF)<<8))
+#else
+#define N2G(x) (x)
+#endif
+
+/**
+ * Convert IP address in text format to 4 byte int format (IPv4)
+ */
+int IPaddress2int(const char *IPaddress)
+{
+	int IPint = 0;
+	inet_pton(AF_INET, IPaddress, &IPint ); // &(sa.sin_addr));
+	return IPint;
+
+	//printf("%s\n", str); // prints "192.0.2.33"
+
+} // IPaddress2int
+
+/**
+ * Prints an IP address to stdout
+ * @param int IPint IPv4 address
+ * @returns -
+ */
+void printIPint(int IPint)
+{
+	struct sockaddr_in sa;
+	//char str[INET_ADDRSTRLEN]; http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#inet_ntopman
+	char str[16];
+
+	// now get it back and print it
+	inet_ntop(AF_INET, &(sa.sin_addr), str, 16);
+
+	printf("%s\n", str); // prints "192.0.2.33"
+} // printIPint
+
 /**
  * Calculate IP header checksum with "Internet checksum" algorithm
  * @param buf
  * @param size
  * @returns Internet checksum for size sized char buffer buf
  */
-unsigned int IPchecksum(const char *buf, unsigned int size)
+unsigned short IPchecksum(const char *buf, unsigned int size)
 {
 	unsigned int sum = 0;
 	unsigned short uint16 = 0; // TODO could be integrated into summing in for?
@@ -27,15 +83,16 @@ unsigned int IPchecksum(const char *buf, unsigned int size)
 	sum = (sum >> 16) + (sum &0xFFFF); // sum MSW and LSW
 
 	sum = H2N(sum); // byte order swap here or elsewhere?
-	return (~sum & 0xFFFF);
+	return (unsigned short)(~sum & 0xFFFF);
 }
+
 /*
  * Tests if the Internet checksum of input buffer is correct
  * @param buf
  * @param size
  * @return boolean
  */
-unsigned int IPchecksumTest(const char *buf, unsigned int size)
+unsigned short IPchecksumTest(const char *buf, unsigned int size)
 {
 	// lecture notes compare to 0xFFFF, but
 	// correct packet internet checksum testing is 0xFFFF before inverse,

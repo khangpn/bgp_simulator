@@ -26,58 +26,6 @@
 
 using namespace std;
 
-// for inet_pton-related usage examples:
-#include <sys/types.h>
-
-#include <arpa/inet.h>
-#include <netinet/in.h>
-
-// define for Intel-style processors:
-#define HOST2NETWORK_CONVERSION_NEEDED
-
-// Host to Network 16-bit byte order conversion
-
-#ifdef HOST2NETWORK_CONVERSION_NEEDED
-#define H2N(x) ( ((x&0xFFFF)>>8) + ((x&0xFF)<<8))
-#else
-#define H2N(x) (x)
-#endif
-
-#ifdef HOST2NETWORK_CONVERSION_NEEDED
-#define N2H(x) ( ((x&0xFFFF)>>8) + ((x&0xFF)<<8))
-#else
-#define N2G(x) (x)
-#endif
-
-/**
- * Convert IP address in text format to 4 byte int format (IPv4)
- */
-int IPaddress2int(const char *IPaddress)
-{
-	int IPint = 0;
-	inet_pton(AF_INET, IPaddress, &IPint ); // &(sa.sin_addr));
-	return IPint;
-
-	//printf("%s\n", str); // prints "192.0.2.33"
-
-} // IPaddress2int
-
-/**
- * Prints an IP address to stdout
- * @param int IPint IPv4 address
- * @returns -
- */
-void printIPint(int IPint)
-{
-	struct sockaddr_in sa;
-	//char str[INET_ADDRSTRLEN]; http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#inet_ntopman
-	char str[16];
-
-	// now get it back and print it
-	inet_ntop(AF_INET, &(sa.sin_addr), str, 16);
-
-	printf("%s\n", str); // prints "192.0.2.33"
-} // printIPint
 
 /**
  * Convert int to string
