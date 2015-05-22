@@ -126,7 +126,7 @@ void Packet::Print()
 
 unsigned short Packet::getChecksum()
 {
-	return IPchecksum((char *)buf, header_size);
+	return IPchecksum((unsigned char *)buf, header_size);
 }
 
 /*

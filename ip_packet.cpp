@@ -10,7 +10,7 @@
 // define for Intel-style processors:
 #define HOST2NETWORK_CONVERSION_NEEDED
 
-// Host to Network 16-bit byte order conversion
+// Host to Network 16-bit byte order conversion (only use if hton and htonl etc. are not available)
 
 #ifdef HOST2NETWORK_CONVERSION_NEEDED
 #define H2N(x) ( ((x&0xFFFF)>>8) + ((x&0xFF)<<8))
@@ -21,7 +21,7 @@
 #ifdef HOST2NETWORK_CONVERSION_NEEDED
 #define N2H(x) ( ((x&0xFFFF)>>8) + ((x&0xFF)<<8))
 #else
-#define N2G(x) (x)
+#define N2H(x) (x)
 #endif
 
 /**
@@ -29,7 +29,7 @@
  */
 unsigned int IPaddress2int(const char *IPaddress)
 {
-	int IPint = 0;
+	unsigned int IPint = 0;
 	inet_pton(AF_INET, IPaddress, &IPint ); // &(sa.sin_addr));
 	return IPint;
 
@@ -60,7 +60,7 @@ void printIPint(int IPint)
  * @param size
  * @returns Internet checksum for size sized char buffer buf
  */
-unsigned short IPchecksum(char *buf, unsigned int size)
+unsigned short IPchecksum(const unsigned char *buf, unsigned int size)
 {
 	unsigned int sum = 0;
 	unsigned short uint16 = 0; // TODO could be integrated into summing in for?
@@ -92,7 +92,7 @@ unsigned short IPchecksum(char *buf, unsigned int size)
  * @param size
  * @return boolean
  */
-unsigned short IPchecksumTest(char *buf, unsigned int size)
+unsigned short IPchecksumTest(const unsigned char *buf, unsigned int size)
 {
 	// lecture notes compare to 0xFFFF, but
 	// correct packet internet checksum testing is 0xFFFF before inverse,
