@@ -12,9 +12,12 @@ int main(void)
 	unsigned char *buf;
 	buf = (unsigned char*)malloc( PACKET_MAX_LEN );
 
+	printf("\n--\n\n");
+
 	buf = p.serialize();
 	iph = p.deserialize(buf, PACKET_MAX_LEN);
-
+	p.Print();
+	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
 
 	// TODO make checksum inside header
 	// TODO make proper checksum testing of header with checksum
@@ -24,10 +27,27 @@ int main(void)
 	/*
 	 * Usage:
 	 *
+
 $ g++ -std=c++11 -lpthread SystemV2_testing.cpp && ./a
-Packet contents:
- 0:45  1:00  2:14  3:00  4:00  5:00  6:00  7:ff  8:06  9:00 10:00 11:00 12:00 13:50 14:14 15:00 16:00 17:5a 18:3c 19:00
-Packet (header) checksum: 4f56
+Packet contents (in two lines after this) (format: {'index:hexvalue '}):
+ 0:45  1:00  2:14  3:00  4:00  5:00  6:00  7:00  8:ff  9:06 10:00 11:00
+12:00 13:00 14:50 15:14 16:00 17:00 18:5a 19:3c
+IP header field values in decimal:
+ver:4. ihl:5. tos:0. len:   20. ide:0. fla:0. FrO:0. iph.ttl:255. iph.protocol:6.
+iph.sourceip:20500. iph.destip:23100.
+Packet (header) checksum: fda7
+
+--
+
+deserialized IP packet header:
+Packet contents (in two lines after this) (format: {'index:hexvalue '}):
+ 0:45  1:00  2:14  3:00  4:00  5:00  6:00  7:00  8:ff  9:06 10:00 11:00
+12:00 13:00 14:50 15:14 16:00 17:00 18:5a 19:3c
+IP header field values in decimal:
+ver:4. ihl:5. tos:0. len:   20. ide:0. fla:0. FrO:0. iph.ttl:255. iph.protocol:6.
+iph.sourceip:20500. iph.destip:23100.
+Packet (header) checksum: fda7
+
 	 *
 	 *
 	 */

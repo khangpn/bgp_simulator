@@ -60,9 +60,10 @@ void printIPint(int IPint)
 
 /**
  * Calculate IP header checksum with "Internet checksum" algorithm
+ * - does not change any bytes in given buffer (make the checksum field zero before calling if you like to)
  * @param buf
  * @param size
- * @returns Internet checksum for size sized char buffer buf
+ * @returns "Internet checksum" (same result as algorithm described in RFC971) for size sized char buffer buf
  */
 unsigned short IPchecksum(const unsigned char *buf, unsigned int size)
 {
@@ -98,8 +99,11 @@ unsigned short IPchecksum(const unsigned char *buf, unsigned int size)
  */
 unsigned short IPchecksumTest(const unsigned char *buf, unsigned int size)
 {
-	// lecture notes compare to 0xFFFF, but
-	// correct packet internet checksum testing is 0xFFFF before inverse,
-	// when inversed 0x0000 is correct result!
+	/* lecture notes compare to 0xFFFF, but
+	 * correct packet internet checksum testing is 0xFFFF before inverse,
+	 * when inversed 0x0000 is correct result!
+	 * (due to not making the checksum field zero before calling the checksum function)
+	 *
+	 */
 	return ( 0x0000 == IPchecksum(buf, size) );
 }

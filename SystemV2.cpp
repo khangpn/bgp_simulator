@@ -16,11 +16,11 @@ struct ip_header_t {
 	unsigned int tos; // TOS
 	unsigned short len; // length of packet, 20 bytes is minimum (5*4 bytes is just the header)
 	unsigned int ident;
-	unsigned int flag;
-	unsigned int offset; // Fragmentation Offset (0 for first in fragmented sequence)
+	unsigned int flags;
+	unsigned int FO; // Fragmentation Offset (0 for first in fragmented sequence)
 	unsigned int ttl; // Time-To-Live
 	unsigned int protocol; // 6=TCP, but what is good here TODO
-	unsigned int chksum; // calculated, zero for calulation phase
+	unsigned int checksum; // calculated, zero for calulation phase
 	unsigned int sourceip;
 	unsigned int destip;
 };
@@ -32,6 +32,8 @@ struct ip_header_t {
 
 /*
  * Packet
+ *
+ * IP header special notes: destination and source IP addresses are not translated from host 32-bit int format to network byte order and vice versa!
  */
 class Packet
 {
@@ -54,11 +56,11 @@ public:
 		iph.tos	= 0; // TOS
 		iph.len	= 20; // length of packet, 20 bytes is minimum (5*4 bytes is just the header)
 		iph.ident	= Identification;
-		iph.flag	= Flags;
-		iph.offset	= FO; // Fragmentation Offset (0 for first in fragmented sequence)
+		iph.flags	= Flags;
+		iph.FO	= FO; // Fragmentation Offset (0 for first in fragmented sequence)
 		iph.ttl	= TTL; // Time-To-Live
 		iph.protocol	= 6; // 6=TCP, but what is good here TODO
-		iph.chksum	= 0; // calculated, zero for calulation phase
+		iph.checksum	= 0; // calculated, zero for calulation phase
 		iph.sourceip	= dstIP;
 		iph.destip		= srcIP;
 
@@ -78,14 +80,15 @@ public:
 
 		buf[i++] = iph.tos << 2; // two lowest bits unused/reserved
 
-		iph.len = N2H(iph.len);
-		buf[i++] = iph.len >>8; // Length. NB. Endianness is corrected.
-		buf[i++] = iph.len & 0xFF;
+		//iph.len = N2H(iph.len);
+		buf[i++] = N2H(iph.len) >>8; // Length. NB. Endianness is corrected.
+		buf[i++] = N2H(iph.len) & 0xFF;
 
-		buf[i++] = Identification;
+		buf[i++] = N2H(iph.ident) >> 8;
+		buf[i++] = N2H(iph.ident) & 0xFF;
 
-		buf[i++] = (Flags << 5 ); // +5 bits of FO
-		buf[i++] = 0;				// last 8 bits of FO ( TODO FO assumed to be always zero)
+		buf[i++] = (iph.flags << 5 ) + iph.FO >> 8; // upper 5 bits of 13 bits of FO
+		buf[i++] = iph.FO & 0xFF; // last 8 bits of FO ( TODO here FO assumed to be always zero)
 
 		buf[i++] = TTL & 0xFF;
 		buf[i++] = Protocol & 0xFF;
@@ -127,12 +130,32 @@ public:
 
 void Packet::Print()
 {
-	printf("Packet contents:\n");
-	for(int i =0; i<20; i++)
+	printf("Packet contents (in two lines after this) (format: {'index:hexvalue '}):\n");
+	for(int i =0; i<iph.len; i++)
 	{
 		printf("%2i:%02x ", i, (unsigned char)buf[i] );
+		if ( (i>1) && (i%11==0) )
+			printf("\n");
 	}
-	printf("\n");
+
+	// print newline - but do not if printing of ipheader happened to already have just printed newline
+	if ( iph.len%11)
+		printf("\n");
+
+	printf("IP header field values in decimal:\n");
+	// print ip_headet_t iph
+	printf("ver:%i. ", iph.ver);
+	printf("ihl:%i. ", iph.ihl);
+	printf("tos:%i. ", iph.tos);
+	printf("len:%5i. ", iph.len);
+	printf("ide:%i. ", iph.ident);
+	printf("fla:%i. ", iph.flags);
+	printf("FrO:%i. ", iph.FO);
+	printf("iph.ttl:%i. ", iph.ttl);
+	printf("iph.protocol:%i. \n", iph.protocol);
+	printf("iph.sourceip:%i. ", iph.sourceip);
+	printf("iph.destip:%i.\n", iph.destip);
+
 }
 
 unsigned short Packet::getChecksum()
@@ -170,9 +193,25 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
 	printf("deserialized IP packet header:\n");
 	iph.ver = buf[0] >> 4;
 	iph.ihl = buf[0] & 0xF;
-	printf("ver:%i. ", iph.ver);
-	printf("ihl:%i. ", iph.ihl);
-	printf("iph.ttl:%i.\n", iph.ttl);
+
+	iph.tos = buf[1] >> 2;
+
+	iph.len = N2H( buf[2] << 8 + buf[3] );
+
+	iph.ident = buf[4] << 8 + buf[5];
+
+	iph.flags = buf[6] >> 5; // flag bits: bit0=MF, bit1=DF, bit2=N/U
+
+	iph.FO = N2H( ( buf[6] & 0x1F ) << 8 + buf[7] ); // TODO
+
+	iph.ttl = buf[8];
+
+	iph.protocol = buf[9];
+
+	iph.checksum = N2H( buf[10] <<8 + buf[11] );
+
+	iph.sourceip = (int)buf[12];
+	iph.destip = (int)buf[16];
 
 	if (error)
 		printf("### ERROR: Packet::deserialize: error count:%i.\n", error);
@@ -181,7 +220,7 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
 }
 
 /*
- *
+ * make the packet into actual sendable bitstream
  */
 unsigned char *Packet::serialize() // the checksum will be recalculated
 {
