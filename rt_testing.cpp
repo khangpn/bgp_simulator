@@ -94,9 +94,9 @@ int main(void)
 	printf("ASPATHlength testing: %s, %i (%i)\n", ASPATHtestString.c_str(), myRouteTable.ASPATHlength(ASPATHtestString), (ASPATHtestResult==myRouteTable.ASPATHlength(ASPATHtestString)) );
 
 	printf("\nIP checksum testing:\n");
-	const char packet[] = {0x01,0x00,'\xF2',0x03, '\xf4','\xf5','\xf6','\xf7', 0x00, 0x00 };
+	const unsigned char packet[] = {0x01,0x00,'\xF2',0x03, '\xf4','\xf5','\xf6','\xf7', 0x00, 0x00 };
 	printf("IP Checksum: %4x (should be 210E as in lec. notes)\n", IPchecksum(packet, sizeof(packet) ) );
-	const char packet2[] = {0x01,0x00,'\xF2',0x03, '\xf4','\xf5','\xf6','\xf7', 0x21, 0x0E };
+	const unsigned char packet2[] = {0x01,0x00,'\xF2',0x03, '\xf4','\xf5','\xf6','\xf7', 0x21, 0x0E };
 	printf("IP Checksum test2a: %4x (should be 0 i.e. 0x0000)\n", IPchecksum(packet2, sizeof(packet2) ) );
 	printf("IP Checksum test2b: %4x (should be 1 i.e. TRUE)\n", IPchecksumTest(packet2, sizeof(packet2) ) );
 
@@ -114,5 +114,15 @@ int main(void)
 	testCharpointer = testConstChar;
 	myRouteTable.printTableASPATH( testCharpointer );
 
+	printf("IPaddress2int testing with 192.168.0.1: %i (without host-to-network byte order conversion)\n", IPaddress2int("192.168.0.1"));
+	printf("IPaddress2int testing with     0.0.0.2:  %i (without host-to-network byte order conversion)\n", IPaddress2int("0.0.0.2"));
+	unsigned int ipi = IPaddress2int("0.0.0.2");
+	printf("IPaddress2int testing with 0.0.0.2: %u\n", htonl(ipi) );
+	string s; char *c;
+	s="0.0.1.0"; c = (char *)s.c_str(); printf("IPaddress2int testing with %s: %u\n", c, htonl(IPaddress2int(c)) );
+	s="0.1.0.0"; c = (char *)s.c_str(); printf("IPaddress2int testing with %s: %u\n", c, htonl(IPaddress2int(c)) );
+	s="1.0.0.0"; c = (char *)s.c_str(); printf("IPaddress2int testing with %s: %u\n", c, htonl(IPaddress2int(c)) );
+	s="192.168.0.1"; c = (char *)s.c_str(); printf("IPaddress2int testing with %s: %u\n", c, htonl(IPaddress2int(c)) );
+	s="255.255.255.255"; c = (char *)s.c_str(); printf("IPaddress2int testing with %s: %u\n", c, htonl(IPaddress2int(c)) );
 	return 0;
 }
