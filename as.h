@@ -14,9 +14,11 @@ using namespace std;
 class RoutingItem {
   public:
     int as_name; // Instead of using IP prefixes, we use AS name to indicate AS
+    int next_hop; // next router to send the packet to
     int path_length; 
     unsigned char * path; //Format: "1 2 3 4"
     int priority;
+    int trust;
 };
 
 #define RT_SIZE 1000
@@ -31,6 +33,7 @@ class RoutingTable {
     void addRoute(int as_name, int path_length, unsigned char * path, int priority);
     void removeRoute(int as_name, int path_length, unsigned char * path);
     void setRoutePriority(int as_name, unsigned char * path, int priority);
+    int queryRoute(int as_name);
     RoutingItem * getRoutes(int as_name);
     RoutingItem * getRouteByPath(int as_name, unsigned char * path);
     RoutingItem * findRoute(int as_name, int path_length, unsigned char * path);
