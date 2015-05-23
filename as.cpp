@@ -397,7 +397,8 @@ void As::remove_route(update_msg msg_update) {
   int withdrawn_length = (int)msg_update.withdrawn_length;
   int destination = (int)msg_update.withdrawn_route[0]; // The first node is the target AS
   if (destination != As::name) {
-    As::rt.removeRoute(destination, withdrawn_length, msg_update.withdrawn_route);
+    //As::rt.removeRoute(destination, withdrawn_length, msg_update.withdrawn_route);
+    As::rt.removeRoute(destination);
 
     As::rt.print_table();
   }
