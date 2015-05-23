@@ -6,7 +6,16 @@ int main(void)
 
 	Packet p = Packet(IP_PACKET, 0, 0, 0, 0, 255, 6, 23100, 20500);
 	p.Print();
-	printf("Packet (header) checksum: %4x\n", p.getChecksum() )
+	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
+
+	ip_header_t iph;
+	unsigned char *buf;
+	buf = (unsigned char*)malloc( PACKET_MAX_LEN );
+
+	buf = p.serialize();
+	iph = p.deserialize(buf, PACKET_MAX_LEN);
+
+
 	// TODO make checksum inside header
 	// TODO make proper checksum testing of header with checksum
 

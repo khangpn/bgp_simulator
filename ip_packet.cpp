@@ -10,7 +10,9 @@
 // define for Intel-style processors:
 #define HOST2NETWORK_CONVERSION_NEEDED
 
-// Host to Network 16-bit byte order conversion (only use if hton and htonl etc. are not available)
+// Host to Network 16-bit byte order conversion
+// - only use if hton and htonl etc. are not available
+// - NB! Visual C++ and GCC offer their solutions to endianness conversion too, cf. http://stackoverflow.com/questions/105252/
 
 #ifdef HOST2NETWORK_CONVERSION_NEEDED
 #define H2N(x) ( ((x&0xFFFF)>>8) + ((x&0xFF)<<8))
@@ -23,6 +25,8 @@
 #else
 #define N2H(x) (x)
 #endif
+
+#define IP_HEADER_LENGTH_MINIMUM 20
 
 /**
  * Convert IP address in text format to 4 byte int format (IPv4)
