@@ -1,3 +1,6 @@
+/*
+ * ip_packet.cpp has C-style functions and definitions related to IP packet
+ */
 
 #include <stdio.h>
 
@@ -10,7 +13,9 @@
 // define for Intel-style processors:
 #define HOST2NETWORK_CONVERSION_NEEDED
 
-// Host to Network 16-bit byte order conversion (only use if hton and htonl etc. are not available)
+// Host to Network 16-bit byte order conversion
+// - only use if hton and htonl etc. are not available
+// - NB! Visual C++ and GCC offer their solutions to endianness conversion too, cf. http://stackoverflow.com/questions/105252/
 
 #ifdef HOST2NETWORK_CONVERSION_NEEDED
 #define H2N(x) ( ((x&0xFFFF)>>8) + ((x&0xFF)<<8))
@@ -23,6 +28,8 @@
 #else
 #define N2H(x) (x)
 #endif
+
+#define IP_HEADER_LENGTH_MINIMUM 20
 
 /**
  * Convert IP address in text format to 4 byte int format (IPv4)
@@ -56,9 +63,10 @@ void printIPint(int IPint)
 
 /**
  * Calculate IP header checksum with "Internet checksum" algorithm
+ * - does not change any bytes in given buffer (make the checksum field zero before calling if you like to)
  * @param buf
  * @param size
- * @returns Internet checksum for size sized char buffer buf
+ * @returns "Internet checksum" (same result as algorithm described in RFC971) for size sized char buffer buf
  */
 unsigned short IPchecksum(const unsigned char *buf, unsigned int size)
 {
@@ -94,8 +102,11 @@ unsigned short IPchecksum(const unsigned char *buf, unsigned int size)
  */
 unsigned short IPchecksumTest(const unsigned char *buf, unsigned int size)
 {
-	// lecture notes compare to 0xFFFF, but
-	// correct packet internet checksum testing is 0xFFFF before inverse,
-	// when inversed 0x0000 is correct result!
+	/* lecture notes compare to 0xFFFF, but
+	 * correct packet internet checksum testing is 0xFFFF before inverse,
+	 * when inversed 0x0000 is correct result!
+	 * (due to not making the checksum field zero before calling the checksum function)
+	 *
+	 */
 	return ( 0x0000 == IPchecksum(buf, size) );
 }
