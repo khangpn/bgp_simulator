@@ -32,6 +32,17 @@ class RoutingItem {
       }
       cout << endl;
     }
+    string toString() {
+      string data = "";
+      data += to_string(destination) + ',' + 
+        to_string(next_hop) + ',' + to_string(path_length) +
+        ',' + to_string(priority) + ',';
+      for (int i=0; i < path_length; i++) {
+        data += to_string((int)path[i]);
+        if ( i < (path_length - 1)) data += " ";
+      }
+      return data;
+    }
 };
 
 #define RT_SIZE 1000
@@ -41,6 +52,7 @@ class RoutingTable {
 
   public:
     int getSize() { return RoutingTable::size; }
+    void addItem(RoutingItem item);
     RoutingItem * getItems() { return RoutingTable::items; }
     RoutingItem getItem(int index) { return RoutingTable::items[index]; }
     void addRoute(int as_name, int path_length, unsigned char * path, int priority);
@@ -56,6 +68,10 @@ class RoutingTable {
 
 #define NB_OFF 0
 #define NB_ON 1
+#define SETUP_CONFIG_FILENAME "as_configs"
+#define SETUP_NEIGHBOUR_FILENAME "neighbours.csv"
+#define ROUTING_TABLE_FILENAME "routing_table.csv"
+#define PACKET_LENGTH 1500
 class As {
   string port;
   int name;
@@ -101,7 +117,7 @@ class As {
   unsigned char * serialize_UPDATE(unsigned char * buffer, struct update_msg *value, int *size);
 
   public:
-    As(string, string);
+    As(string, string, string);
 
     string getPort() { return port; }
     int getName() { return name; }
@@ -113,6 +129,8 @@ class As {
     void setup_listener();
     void setup_as(string);
     void neighbours_from_file(string);
+    void save_rt(string);
+    void rt_from_file(string);
 
     void keep_alive();
     void send_OPEN();

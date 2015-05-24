@@ -21,6 +21,13 @@ unsigned char * path, int priority=0) {
   }
 }
 
+void RoutingTable::addItem(RoutingItem item) {
+  if (findRoute(item.destination, item.path_length, item.path) == NULL) {
+    RoutingTable::items[RoutingTable::size] = item;
+    RoutingTable::size++;
+  }
+}
+
 //int RoutingTable::removeRoute(int destination, int path_length, unsigned char * path) {
 //  int deleted = 0;
 //  int index = indexOfRoute(destination, path_length, path);

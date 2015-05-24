@@ -1,25 +1,24 @@
 #include "as.h"
 #include "stdio.h"
+#include "SystemV2.cpp"
 
 //#include "as_bgp_listen.cpp"
 //#include "as_bgp_send.cpp"
-
-#define SETUP_CONFIG_FILENAME "as_configs"
-#define SETUP_NEIGHBOUR_FILENAME "neighbours.csv"
-#define PACKET_LENGTH 1500
 
 using namespace std;
 
 //void As::bgp_send(char *port, unsigned char *msg, const int msg_len);
 //void As::bgp_listen(char *port);
 
-As::As (string as_config, string neighbours_config) {
+As::As (string as_config, string neighbours_config, string rt_config) {
   cout << ">>> Setting up AS..." << endl;
   As::setup_as(as_config);
 
   cout << ">>> Setting up neighbours..." << endl;
   neighbours = setup_neighbours(neighbours_config);
 
+  cout << ">>> Setting up routing table..." << endl;
+  As::rt_from_file(rt_config);
 }
 
 void As::neighbours_from_file(string config) {
@@ -84,6 +83,69 @@ map<int, string> As::setup_neighbours(string neighbours_config)
   return neighbours;
   /* ========== END ========== */
 
+}
+
+void As::save_rt(string rt_config) {
+  //cout << "============SAVING RT TO FILE===========" << endl;
+  ofstream config_file;
+  config_file.open (rt_config);
+  for (int i = 0; i < As::rt.getSize(); i++) {
+    RoutingItem item = As::rt.getItem(i);
+    //cout << item.toString() << endl;
+    config_file << item.toString() << "\n";
+  }
+  config_file.close();
+}
+
+void As::rt_from_file(string rt_config_filename) {
+  string line;
+  ifstream config_file;
+  config_file.open( rt_config_filename );
+  if ( !config_file.is_open() ) {
+	  fprintf(stderr, "### error in opening file: ");
+	  fprintf(stderr, "%s", rt_config_filename.c_str());
+	  fprintf(stderr, "\n");
+  }
+  else {
+	  while(getline(config_file, line))
+	  {
+	    stringstream lineStream(line);
+      string destination;
+      string next_hop;
+      string path_length; 
+      string priority;
+      string path; //Format: "1 2 3 4"
+	    std::getline(lineStream, destination, ',');
+	    std::getline(lineStream, next_hop, ',');
+	    std::getline(lineStream, path_length, ',');
+	    std::getline(lineStream, priority, ',');
+	    std::getline(lineStream, path, ',');
+      
+      cout << destination << endl;
+      cout << next_hop << endl;
+      cout << path_length << endl; 
+      cout << priority << endl;
+      cout << path << endl; //Format: "1 2 3 4"
+
+      RoutingItem item;
+      item.destination = std::stoi(destination);
+      item.next_hop = std::stoi(next_hop);
+      item.path_length = std::stoi(path_length); 
+      item.priority = std::stoi(priority);
+      stringstream pathStream(path);
+      string as_node;
+      item.path = (unsigned char *)malloc(item.path_length);
+      int i = 0;
+      while (getline(pathStream, as_node, ' ')) {
+        //cout << "NODE: " << as_node << endl;
+        item.path[i] = std::stoi(as_node);
+        i++;
+      }
+      As::rt.addItem(item);
+	  }
+    As::rt.print_table();
+	  config_file.close();
+  }
 }
 
 /**
@@ -360,6 +422,7 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
         thread transfer_thread(&As::notify_adding, this, msg_update);
         transfer_thread.detach();
       }
+
       *size = 1;
       status[0] = 0;
       msg_return = status;
@@ -390,6 +453,9 @@ void As::add_route(update_msg msg_update, int priority = 0){
     As::rt.addRoute(destination, path_length, msg_update.path_value, priority);
 
     As::rt.print_table();
+
+    thread saving_thread(&As::save_rt, this, ROUTING_TABLE_FILENAME);
+    saving_thread.detach();
   }
 }
 
@@ -401,6 +467,9 @@ void As::remove_route(update_msg msg_update) {
     As::rt.removeRoute(destination);
 
     As::rt.print_table();
+
+    thread saving_thread(&As::save_rt, this, ROUTING_TABLE_FILENAME);
+    saving_thread.detach();
   }
 }
 
@@ -560,10 +629,23 @@ void As::self_advertise() {
   }
 }
 
-void As::client_communication_simulation() {
-  for (int i=0; i < rt.getSize(); i++) {
-  }
-}
+//void As::client_communication_simulation() {
+//  while (true) {
+//    int destination = 3; // for testing 
+//    RoutingItem item = rt.queryRoute(i);
+//	  Packet p = Packet(4, 0, 0, 0, 0, 255, 6, As::name, destination);
+//    int next_hop = item.getNextHop();
+//
+//    char port[10];
+//    strcpy(port, neighbours[next_hop].c_str());
+//
+//	  unsigned char * buf = (unsigned char*)malloc( PACKET_MAX_LEN );
+//	  buf = p.serialize();
+//
+//    int status = bgp_send(port, buf, p.getPacketLength());
+//    sleep(3);
+//  }
+//}
 
 void As::run() {
   thread listener_thread(&As::setup_listener, this);
@@ -579,12 +661,15 @@ void As::run() {
   //thread advertise_thread(&As::self_advertise, this);
   //advertise_thread.detach();
 
+  //thread client_thread(&As::client_communication_simulation, this);
+  //client_thread.detach();
+
   As::keep_alive();
 }
 
 int main()
 {
-  As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME );
+  As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME, ROUTING_TABLE_FILENAME);
   as.run();
   return 0;
 }
