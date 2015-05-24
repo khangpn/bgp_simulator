@@ -10,7 +10,7 @@ using namespace std;
 //void As::bgp_send(char *port, unsigned char *msg, const int msg_len);
 //void As::bgp_listen(char *port);
 
-As::As (string as_config, string neighbours_config, string rt_config) {
+As::As (string as_config, string neighbours_config, string rt_config, string client_config) {
   cout << ">>> Setting up AS..." << endl;
   As::setup_as(as_config);
 
@@ -19,6 +19,9 @@ As::As (string as_config, string neighbours_config, string rt_config) {
 
   cout << ">>> Setting up routing table..." << endl;
   As::rt_from_file(rt_config);
+
+  cout << ">>> Setting up AS clients..." << endl;
+  As::setup_client(client_config);
 }
 
 void As::neighbours_from_file(string config) {
@@ -47,6 +50,23 @@ void As::setup_as(string as_config) {
     As::name = std::stoi(as_name);
     cout << "PORT: " << as_port << endl;
     As::port = as_port;
+	  config_file.close();
+  }
+}
+
+void As::setup_client(string client_config) {
+  ifstream config_file;
+  config_file.open( client_config );
+  if ( !config_file.is_open() ) {
+	  fprintf(stderr, "### error in opening file: ");
+	  fprintf(stderr, "%s", client_config.c_str());
+	  fprintf(stderr, "\n");
+  }
+  else {
+	  string client_port;
+	  getline(config_file, client_port);
+    cout << "CLIENT PORT: " << client_port << endl;
+    As::client_port = client_port;
 	  config_file.close();
   }
 }
@@ -163,6 +183,27 @@ void As::setup_listener()
 	&& ( atoi(listen_port) < 65536 ) ) {
 	  cout << "Listening port: " << listen_port << endl;
 	  bgp_listen(listen_port);
+	}
+	else {
+	  cout << "ERROR: Listen port syntax error."<< endl;
+	}
+}
+
+/**
+ *  Setup AS server
+ */
+void As::setup_client_listener()
+{
+  cout << ">>> Setting up client listener..." << endl;
+  char listen_port[10];
+  strcpy(listen_port, As::client_port.c_str());
+
+  // simple consistency checks for port read from file
+  if ( ( strlen(listen_port)<6 )
+	&& ( atoi(listen_port) > 0 )
+	&& ( atoi(listen_port) < 65536 ) ) {
+	  cout << "Client listening port: " << listen_port << endl;
+	  client_listen(listen_port);
 	}
 	else {
 	  cout << "ERROR: Listen port syntax error."<< endl;
@@ -438,6 +479,22 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
   return msg_return;
 }
 
+unsigned char * As::client_handle_msg(unsigned char *msg, const int bytes_received, int * size) {
+  unsigned char *msg_return, status[1];
+  if (bytes_received > 0) {
+    Packet p;
+	  ip_header_t iph;
+	  unsigned char *buf = (unsigned char*)malloc( PACKET_MAX_LEN );
+	  iph = p.deserialize(buf, PACKET_MAX_LEN);
+    cout << "===========CLIENT MSG============" << endl;
+    cout << iph.sourceip << ":" << iph.destip << endl;
+  }
+  *size = 1;
+  status[0] = 0;
+  msg_return = status;
+  return msg_return;
+}
+
 void As::switch_neighbour(int as_name, int state) {
   if (neighbours_state.find(as_name) != neighbours_state.end()) {
     neighbours_state[as_name] = state;
@@ -629,23 +686,30 @@ void As::self_advertise() {
   }
 }
 
-//void As::client_communication_simulation() {
-//  while (true) {
-//    int destination = 3; // for testing 
-//    RoutingItem item = rt.queryRoute(i);
-//	  Packet p = Packet(4, 0, 0, 0, 0, 255, 6, As::name, destination);
-//    int next_hop = item.getNextHop();
-//
-//    char port[10];
-//    strcpy(port, neighbours[next_hop].c_str());
-//
-//	  unsigned char * buf = (unsigned char*)malloc( PACKET_MAX_LEN );
-//	  buf = p.serialize();
-//
-//    int status = bgp_send(port, buf, p.getPacketLength());
-//    sleep(3);
-//  }
-//}
+void As::client_communication_simulation() {
+  if (As::name != 3) {
+    while (true) {
+      int destination = 3; // for testing 
+      RoutingItem item = rt.queryRoute(destination);
+      if ( item.destination != 0 ) {
+        cout << "============CLIENT COMMUNICATION===========" << endl;
+        item.print();
+
+	      Packet p = Packet(4, 0, 0, 0, 0, 255, 6, As::name, destination);
+        int next_hop = item.next_hop;
+
+        char port[10];
+        strcpy(port, neighbours[next_hop].c_str());
+
+	      unsigned char * buf = (unsigned char*)malloc( p.getHeaderLengthBytes() );
+	      buf = p.serialize();
+
+        int status = client_send(port, buf, p.getHeaderLengthBytes());
+      }
+      sleep(3);
+    }
+  }
+}
 
 void As::run() {
   thread listener_thread(&As::setup_listener, this);
@@ -661,15 +725,16 @@ void As::run() {
   //thread advertise_thread(&As::self_advertise, this);
   //advertise_thread.detach();
 
-  //thread client_thread(&As::client_communication_simulation, this);
-  //client_thread.detach();
+  thread client_thread(&As::client_communication_simulation, this);
+  client_thread.detach();
 
   As::keep_alive();
 }
 
 int main()
 {
-  As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME, ROUTING_TABLE_FILENAME);
+  As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME, 
+    ROUTING_TABLE_FILENAME, CLIENT_CONFIG_FILENAME);
   as.run();
   return 0;
 }
