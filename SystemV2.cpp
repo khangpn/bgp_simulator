@@ -3,16 +3,31 @@
  *
  * also "SystemV2"
  *
- * A network simulation system for BGP action with routers and packets
+
+To create a IP packet
+1) create a new object Packet with constructor (see SystemV2_testing.cpp as an example)
+2) add a message to the Packet with Packet::setMessage(unsigned char* buf, size)
+3) checksum and packet length adjusted automatically in method setMessage
+4) get raw Packet as a pointer with Packet::getMessage (getMessage allocates the memory)
+
+NB.	There is no UDP and TCP header handling (currently).
+	There is only IP header and message payload handling (currently).
+
+ * This is also
+ * a network simulation system for BGP action with routers and packets
  *
  * -- "Option B": THIS NOT THE CHOSEN WAYFOR THE PROJECT:
  * -- may be we can just simulate network traffic and router action --
  * -- & forget about actual networking stuff provided by OS --
+
  *
  */
 
 // set to zero to kill all extra verbosity
-#define VERBOSE 2
+#ifndef VERBOSE
+#define VERBOSE 0
+#endif
+
 
 #include "ip_packet.cpp"
 
@@ -37,10 +52,11 @@ unsigned char *message = NULL;
 ip_header_t iph;
 
 public:
-	Packet() {;};
+	// Packet() {;}; // Empty constructor
 	~Packet() {;};
 
 	/*
+	 * Constructor
 	 * IP packet
 	 * - does not support optional headers
 	 * - hard-coded protocol setting of 6=TCP
@@ -64,6 +80,7 @@ public:
 		header_size = iph.len;
 		packet_size = header_size;
 
+//remove this duplicate code with ::deserialize: // TODO
 /**/
 		// construct an IP packet bitstream:
 
@@ -106,6 +123,14 @@ public:
 		buf[i++] = (srcIP >>8) & 0xFF;
 		buf[i++] = (srcIP >>0) & 0xFF;
 /**/
+		// TODO poor code to update checksum after all:
+		int checksum =0;
+		checksum = IPchecksum( this->buf, this->getHeaderLengthBytes() );
+		this->setChecksum(checksum);
+
+		// buf should be set up-to-date as after the constructor the situation should be the same as with after serialize()
+		buf[10] = H2N(checksum) >> 8;
+		buf[11] = H2N(checksum) & 0xFF;
 };
 
 	/*
@@ -188,7 +213,7 @@ void Packet::recalculateChecksum()
 
 	// serialize and calculate new checksum
 	tempBuf = this->serialize();
-	newChecksum = IPchecksum((unsigned char *)tempBuf, this->getHeaderLengthBytes());
+	newChecksum = IPchecksum( this->buf, this->getHeaderLengthBytes() );
 
 	// finish: clear reserverd memory and set new checksum
 	free(tempBuf);
@@ -197,6 +222,7 @@ void Packet::recalculateChecksum()
 
 unsigned short Packet::getChecksum()
 {
+	this->recalculateChecksum();
 	return this->iph.checksum;
 }
 
@@ -278,8 +304,6 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
 unsigned char *Packet::serialize()
 {
 	// TODO make sure checksum is updated
-	printf("Packet length: %i\n", getPacketLength());
-
 	/**/
 			// construct an IP packet bitstream:
 

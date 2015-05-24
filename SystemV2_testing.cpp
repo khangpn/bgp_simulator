@@ -1,3 +1,14 @@
+/*
+ * SystemV2_testing.cpp
+ *
+ * testing and example usage unit for SystemV2.cpp and it's IP packet handling functions
+ *
+ */
+
+#ifndef VERBOSE
+#define VERBOSE 2
+#endif
+
 #include "SystemV2.cpp"
 
 int main(void)
@@ -6,28 +17,42 @@ int main(void)
 
 	unsigned char payload[4]={'@','P','P',0};
 
+	// create a new packet
 	Packet p = Packet(IP_PACKET, 0, 0, 0, 0, 255, 6, 23100, 20500);
 	p.Print();
+	printf("Packet length: %i\n", p.getPacketLength());
+	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
+	printf("Add 4 byte message to packet.\n");
 	p.setMessage(payload, 4);
-	//p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
+	printf("Packet length: %i\n", p.getPacketLength());
 	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
 
-	ip_header_t iph;
-	unsigned char *buf;
-	buf = (unsigned char*)malloc( PACKET_MAX_LEN );
+	unsigned char *buf; // buffer for packet
 
 	printf("\n--\n\n");
 
 	buf = p.serialize();
-	iph = p.deserialize(buf, PACKET_MAX_LEN);
 	p.Print();
+	printf("Packet length: %i\n", p.getPacketLength());
 	printf("getMessage: %s.\n",p.getMessage()); // assumes that message happens to be null-terminated string!
-	//p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
 	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
+	//p.recalculateChecksum();
+	printf("Packet (header) checksum: %4x (again)\n", p.getChecksum() );
+	printf("Decrease packet header TTL value.\n");
+	p.setTTL( p.getTTL()-1 );
+	//p.recalculateChecksum();
+	printf("Packet (header) checksum: %4x (again)\n", p.getChecksum() );
+	p.Print();
+
+	//Code reserve for more testing:
+	// 	buf = (unsigned char*)malloc( PACKET_MAX_LEN );
+	// 	ip_header_t iph;
+	// 	p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
+	// 	iph = p.deserialize(buf, PACKET_MAX_LEN);
+
 
 	// TODO make checksum inside header
 	// TODO make proper checksum testing of header with checksum
-
 	// TODO receive & inspect incoming packet (as buf char*)
 
 	/*
