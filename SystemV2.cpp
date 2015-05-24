@@ -39,8 +39,10 @@ class Packet
 {
 
 unsigned char *buf = NULL;
-unsigned int packet_size = 0;
-unsigned int header_size = 0;
+
+unsigned int packet_size = 0; // TODO not use this, use values iniph via getters and setters!
+unsigned int header_size = 0; // TODO not use this, use values iniph via getters and setters!
+
 unsigned char *message = NULL;
 ip_header_t iph;
 
@@ -113,6 +115,7 @@ public:
 	 * methods
 	 */
 	void Print();
+	void recalculateChecksum(); // expensive recalculation of checksum
 	unsigned short getChecksum();
 	ip_header_t deserialize( unsigned char *buf, int size);
 	unsigned char *serialize();		// the checksum will be recalculated
@@ -124,6 +127,17 @@ public:
 	int getDestip(); // will set the header value for destination IP
 	void setSourceip( int sourceip ); // will set the header value for destination IP
 	int getSourceip(); // will set the header value for destination IP
+
+	void setMessageLength( int size );
+	int getMessageLength();
+	void setChecksum( unsigned short checksum );
+	void setMessage( unsigned char *message, int size );
+	void setPacketLength( int len );
+	int getPacketLength();
+	int getHeaderLengthBytes();
+	void setHeaderLengthBytes( int ihl_bytes );
+	int getHeaderLengthValue();
+	void setHeaderLengthValue( int ihl );
 
 	void remove(); 				// remove packet (free memory)
 };
@@ -158,9 +172,25 @@ void Packet::Print()
 
 }
 
+void Packet::recalculateChecksum()
+{
+	unsigned short newChecksum = 0;
+	unsigned char *tempBuf; // why unsigned char *tempBuf[PACKET_MAX_LEN] does not work?
+	tempBuf = (unsigned char*)malloc( PACKET_MAX_LEN ); // allocate large enough buffer
+
+	tempBuf = this->serialize();
+	newChecksum = IPchecksum((unsigned char *)tempBuf, this->getHeaderLengthBytes());
+	this->setChecksum( newChecksum );
+}
+
 unsigned short Packet::getChecksum()
 {
-	return IPchecksum((unsigned char *)buf, header_size);
+	return this->iph.checksum;
+}
+
+void Packet::setChecksum( unsigned short checksum )
+{
+	this->iph.checksum = checksum;
 }
 
 /*
@@ -237,13 +267,71 @@ unsigned char *Packet::getMessage()  // the message payload of Packet
 }
 
 /*
+ * Set packet's message (=payload) length
+ */
+void Packet::setMessageLength( int size )
+{
+	// the new size of packet is header length + message length
+	setPacketLength( getHeaderLengthBytes() + size );
+}
+
+int Packet::getMessageLength()
+{
+	// the new size of packet is header length + message length
+	return getPacketLength() - getHeaderLengthBytes();
+}
+
+/*
  * set the message (=payload) portion of packet
  * - does not copy data
+ * - message is not included in checksum
+ * - if changing message changes message size, the packet size length changes and header checksum must be changed
  */
-void Packet::setMessage( unsigned char * message )
+void Packet::setMessage( unsigned char *message, int size )
 {
 	this->message = message;
+	setMessageLength( size );
+	setChecksum(0);
 	// TODO update checksum
+}
+
+/*
+ * Set packet length field in header to given value
+ */
+void Packet::setPacketLength( int len )
+{
+	iph.len = len;
+}
+
+int Packet::getPacketLength()
+{
+	return iph.len;
+}
+
+/*
+ * Returns packet's header's length in units of bytes
+ */
+int Packet::getHeaderLengthBytes()
+{
+	return this->iph.ihl*4;
+}
+
+void Packet::setHeaderLengthBytes( int ihl_bytes )
+{
+	this->iph.ihl = ihl_bytes/4;
+}
+
+/*
+ * Return packet's header's length in raw field value with the unit of 32-bit words
+ */
+int Packet::getHeaderLengthValue()
+{
+	return this->iph.ihl;
+}
+
+void Packet::setHeaderLengthValue( int ihl )
+{
+	this->iph.ihl = ihl;
 }
 
 void Packet::setTTL( int ttl ) // will set the IP header TTL value

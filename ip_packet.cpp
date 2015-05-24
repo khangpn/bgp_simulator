@@ -1,3 +1,6 @@
+/*
+ * ip_packet.cpp has C-style functions and definitions related to IP packet
+ */
 
 #include <stdio.h>
 
