@@ -13,7 +13,7 @@ using namespace std;
 
 class RoutingItem {
   public:
-    int as_name; // Instead of using IP prefixes, we use AS name to indicate AS
+    int destination; // Instead of using IP prefixes, we use AS name to indicate AS
     int next_hop; // next router to send the packet to
     int path_length; 
     unsigned char * path; //Format: "1 2 3 4"
@@ -22,7 +22,7 @@ class RoutingItem {
     int getNextHop() { return next_hop; }
     void print() { 
       cout << "============ROUTING ITEM============" << endl;
-      cout << "Name: " << as_name << endl;
+      cout << "Name: " << destination << endl;
       cout << "Next Hop: " << next_hop << endl;
       cout << "Path Length: " << path_length << endl;
       cout << "Priority: " << priority << endl;
@@ -44,15 +44,13 @@ class RoutingTable {
     RoutingItem * getItems() { return RoutingTable::items; }
     RoutingItem getItem(int index) { return RoutingTable::items[index]; }
     void addRoute(int as_name, int path_length, unsigned char * path, int priority);
-    int removeRoute(int destination, int path_length, unsigned char * path);
+    //int removeRoute(int destination, int path_length, unsigned char * path);
     int removeRoute(int destination);
     int containNode(RoutingItem item, int as_name);
     void setRoutePriority(int as_name, unsigned char * path, int priority);
-    int queryRoute(int as_name);
-    RoutingItem * getRoutes(int as_name);
-    RoutingItem * getRouteByPath(int as_name, unsigned char * path);
+    RoutingItem * queryRoute(int destination);
     RoutingItem * findRoute(int as_name, int path_length, unsigned char * path);
-    int indexOfRoute(int as_name, int path_length, unsigned char * path);
+    //int indexOfRoute(int as_name, int path_length, unsigned char * path);
     void print_table();
 };
 
@@ -141,5 +139,7 @@ class As {
     void notify_adding(update_msg);
     void notify_removing(update_msg);
     void advertise_routes(int as_name); // send rt items to an AS
+    // Simulate clients' IP packet communication
+    void client_communication_simulation(); 
     void run();
 };

@@ -521,7 +521,7 @@ void As::advertise_routes(int receiver) {
         strcpy(port, neighbours[receiver].c_str());
         int status = bgp_send(port, msg, msg_size);
         cout << "=======================" << endl;
-        cout << "ADVERTISING " << item.as_name << " TO " << receiver << endl;
+        cout << "ADVERTISING " << item.destination << " TO " << receiver << endl;
 
         free(msg);
       }
@@ -557,6 +557,11 @@ void As::self_advertise() {
       }
     } 
     sleep(3);
+  }
+}
+
+void As::client_communication_simulation() {
+  for (int i=0; i < rt.getSize(); i++) {
   }
 }
 
