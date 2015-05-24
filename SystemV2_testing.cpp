@@ -4,8 +4,11 @@ int main(void)
 {
 #define IP_PACKET 4
 
+	unsigned char payload[4]={'@','P','P',0};
+
 	Packet p = Packet(IP_PACKET, 0, 0, 0, 0, 255, 6, 23100, 20500);
 	p.Print();
+	p.setMessage(payload, 4);
 	//p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
 	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
 
@@ -18,6 +21,7 @@ int main(void)
 	buf = p.serialize();
 	iph = p.deserialize(buf, PACKET_MAX_LEN);
 	p.Print();
+	printf("getMessage: %s.\n",p.getMessage()); // assumes that message happens to be null-terminated string!
 	//p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
 	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
 

@@ -324,6 +324,7 @@ unsigned char *Packet::serialize()
 	/**/
 
 	// i should now be 20 (no optional headers)
+	memcpy(&buf[i], this->message, getMessageLength() );
 
 	return buf;
 }
