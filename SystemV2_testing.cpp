@@ -27,28 +27,31 @@ int main(void)
 	printf("Packet length: %i\n", p.getPacketLength());
 	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
 
-	unsigned char *buf; // buffer for packet
-
-	printf("\n--\n\n");
-
+	unsigned char *buf; // buffer for icoming packet
 	buf = p.serialize();
-	p.Print();
-	printf("Packet length: %i\n", p.getPacketLength());
-	printf("getMessage: %s.\n",p.getMessage()); // assumes that message happens to be null-terminated string!
-	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
+
+	printf("\n--\n\n"); // now test with serialized packet as bitstream in buffer buf
+
+	Packet in = Packet(IP_PACKET, 0, 0, 0, 0, 31, 3, 0x1122, 0x3344); // yes, stoopid to initialize
+	ip_header_t iph;
+	iph = in.deserialize( buf, p.getPacketLength() );
+	in.Print();
+	printf("Packet length: %i\n", in.getPacketLength());
+	printf("getMessage: %s.\n",in.getMessage()); // assumes that message happens to be null-terminated string!
+	printf("Packet (header) checksum: %4x\n", in.getChecksum() );
 	//p.recalculateChecksum();
-	printf("Packet (header) checksum: %4x (again)\n", p.getChecksum() );
+	printf("Packet (header) checksum: %4x (again)\n", in.getChecksum() );
 	printf("Decrease packet header TTL value.\n");
-	p.setTTL( p.getTTL()-1 );
+	in.setTTL( in.getTTL()-1 );
 	//p.recalculateChecksum();
-	printf("Packet (header) checksum: %4x (again)\n", p.getChecksum() );
-	p.Print();
+	printf("Packet (header) checksum: %4x (again)\n", in.getChecksum() );
+	in.Print();
 
 	//Code reserve for more testing:
 	// 	buf = (unsigned char*)malloc( PACKET_MAX_LEN );
-	// 	ip_header_t iph;
+	//
 	// 	p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
-	// 	iph = p.deserialize(buf, PACKET_MAX_LEN);
+	//
 
 
 	// TODO make checksum inside header

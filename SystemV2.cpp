@@ -237,8 +237,7 @@ void Packet::setChecksum( unsigned short checksum )
  */
 ip_header_t Packet::deserialize( unsigned char *buf, int size )
 {
-	ip_header_t iph;
-	ip_header_t iph_temp; // temporary memory structure
+	//ip_header_t iph;
 	int error = 0; // count errors
 
 	// Initial test, for minimum length requirement.
@@ -249,9 +248,7 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
 		error++;
 	}
 
-	//memcpy(&iph, buf, 20); // 20 is ipheader minimum size, and the size of ip_header_t TODO make better
-
-	if (VERBOSE>0) printf("deserialized IP packet header:\n"); // TODO VERBOSE
+	if (VERBOSE>0) printf("deserialized IP packet header:\n");
 
 	// uses optimal verification strategy: complete structure is formed first and validity verification is done afterwards
 
@@ -285,14 +282,20 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
 	}
 
 	//TODO
-	// step 1 check if IPv4 info is OK
-	// step 2 check IHL
-	// step 3 check length?
-	// step 4 check checksum?
-	// step 5 other? (let me see lecture notes)
+	// 	X 	step 1 check if IPv4 info is OK
+	// 	O 	step 2 check IHL
+	// 	~ 	step 3 check length?
+	// 	O 	step 4 check checksum?
+	// 	O 	step 5 other? (let me see lecture notes)
 
 	if (error)
 		printf("### ERROR: Packet::deserialize: error count:%i.\n", error);
+
+	// TODO is this correct
+	// TODO old message memory is not released?
+	if (message != NULL)
+		free(message);
+	message = &buf[20];
 
 	return iph;
 }
@@ -303,7 +306,6 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
  */
 unsigned char *Packet::serialize()
 {
-	// TODO make sure checksum is updated
 	/**/
 			// construct an IP packet bitstream:
 
