@@ -1,5 +1,6 @@
 /*
- * ip_packet.cpp has C-style functions and definitions related to IP packet
+ * ip_packet.cpp
+ * - has C-style functions and definitions related to IP transmission and IP packet
  */
 
 #include <stdio.h>
@@ -9,6 +10,23 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+
+struct ip_header_t {
+	unsigned int ihl; // default and minimum header length of five 32b long words
+	unsigned int ver; // 4 for IPv4
+	unsigned int tos; // TOS
+	unsigned short len; // length of packet, 20 bytes is minimum (5*4 bytes is just the header)
+	unsigned int ident;
+	unsigned int flags;
+	unsigned int FO; // Fragmentation Offset (0 for first in fragmented sequence)
+	unsigned int ttl; // Time-To-Live
+	unsigned int protocol; // 6=TCP, but what is good here TODO
+	unsigned int checksum; // calculated, zero for calulation phase
+	unsigned int sourceip;
+	unsigned int destip;
+};
+
+#define PACKET_MAX_LEN 16384
 
 // define for Intel-style processors:
 #define HOST2NETWORK_CONVERSION_NEEDED

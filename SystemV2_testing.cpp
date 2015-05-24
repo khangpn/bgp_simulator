@@ -6,7 +6,7 @@ int main(void)
 
 	Packet p = Packet(IP_PACKET, 0, 0, 0, 0, 255, 6, 23100, 20500);
 	p.Print();
-	p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
+	//p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
 	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
 
 	ip_header_t iph;
@@ -18,7 +18,7 @@ int main(void)
 	buf = p.serialize();
 	iph = p.deserialize(buf, PACKET_MAX_LEN);
 	p.Print();
-	p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
+	//p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
 	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
 
 	// TODO make checksum inside header
