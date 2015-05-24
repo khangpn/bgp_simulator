@@ -2,15 +2,15 @@
 using namespace std;
 
 //class RoutingItem {
-//  int as_name; // Instead of using IP prefixes, we use AS name to indicate AS
+//  int destination; // Instead of using IP prefixes, we use AS name to indicate AS
 //  unsigned char * path; //Format: "1 2 3 4"
 //  int priority;
 //};
-void RoutingTable::addRoute(int as_name, int path_length,
+void RoutingTable::addRoute(int destination, int path_length,
 unsigned char * path, int priority=0) {
-  if (findRoute(as_name, path_length, path) == NULL) {
+  if (findRoute(destination, path_length, path) == NULL) {
     RoutingItem item;
-    item.as_name = as_name;
+    item.destination = destination;
     item.path_length = path_length;
     item.path = path;
     item.priority = priority;
@@ -21,19 +21,26 @@ unsigned char * path, int priority=0) {
   }
 }
 
-int RoutingTable::removeRoute(int destination, int path_length, unsigned char * path) {
-  int deleted = 0;
-  int index = indexOfRoute(destination, path_length, path);
-  if (index != -1) {
-    for(int i=index; i < RoutingTable::size; i++)
-      RoutingTable::items[i] = RoutingTable::items[i+1];
-    RoutingItem empty;
-    RoutingTable::items[RoutingTable::size - 1] = empty;
-    RoutingTable::size -= 1;
-    deleted += 1;
+void RoutingTable::addItem(RoutingItem item) {
+  if (findRoute(item.destination, item.path_length, item.path) == NULL) {
+    RoutingTable::items[RoutingTable::size] = item;
+    RoutingTable::size++;
   }
-  return deleted;
 }
+
+//int RoutingTable::removeRoute(int destination, int path_length, unsigned char * path) {
+//  int deleted = 0;
+//  int index = indexOfRoute(destination, path_length, path);
+//  if (index != -1) {
+//    for(int i=index; i < RoutingTable::size; i++)
+//      RoutingTable::items[i] = RoutingTable::items[i+1];
+//    RoutingItem empty;
+//    RoutingTable::items[RoutingTable::size - 1] = empty;
+//    RoutingTable::size -= 1;
+//    deleted += 1;
+//  }
+//  return deleted;
+//}
 
 int RoutingTable::removeRoute(int destination) {
   int deleted = 0;
@@ -62,32 +69,49 @@ int RoutingTable::containNode(RoutingItem item, int as_name) {
   return 0;
 }
 
-int RoutingTable::indexOfRoute(int as_name,
-int path_length, unsigned char * path) {
+RoutingItem * RoutingTable::queryRoute(int destination) {
+  RoutingItem * best = new RoutingItem;
   for(int i=0; i < RoutingTable::size; i++) {
-    RoutingItem current = items[i];
-    if (as_name == current.as_name && current.path_length == path_length) {
-      int flag = 0;
-      for(int i = 0; i < path_length; i++) {
-        if (path[i] != current.path[i]) {
-          flag = 1;
-          break;
-        }
+    RoutingItem current = RoutingTable::items[i];
+    if (current.destination == destination) {
+      if ((best->destination == 0) || 
+      (current.priority > best->priority) ||
+      (current.priority == best->priority && 
+      current.path_length < best->path_length)) {
+        best = &current;
       }
-      if (flag == 0) return i;
     }
   }
-  return -1;
+  if (best->destination == 0) return NULL;
+  return best;
 }
 
-RoutingItem * RoutingTable::findRoute(int as_name,
+//int RoutingTable::indexOfRoute(int destination,
+//int path_length, unsigned char * path) {
+//  for(int i=0; i < RoutingTable::size; i++) {
+//    RoutingItem current = items[i];
+//    if (destination == current.as_name && current.path_length == path_length) {
+//      int flag = 0;
+//      for(int i = 0; i < path_length; i++) {
+//        if (path[i] != current.path[i]) {
+//          flag = 1;
+//          break;
+//        }
+//      }
+//      if (flag == 0) return i;
+//    }
+//  }
+//  return -1;
+//}
+
+RoutingItem * RoutingTable::findRoute(int destination,
 int path_length, unsigned char * path) {
   for(int i=0; i < RoutingTable::size; i++) {
     RoutingItem current = items[i];
-    if (as_name == current.as_name && current.path_length == path_length) {
+    if (destination == current.destination && current.path_length == path_length) {
       int flag = 0;
-      for(int i = 0; i < path_length; i++) {
-        if (path[i] != current.path[i]) {
+      for(int j = 0; j < path_length; j++) {
+        if (path[j] != current.path[j]) {
           flag = 1;
           break;
         }
@@ -98,19 +122,15 @@ int path_length, unsigned char * path) {
   return NULL;
 }
 
-void RoutingTable::setRoutePriority(int as_name,
+void RoutingTable::setRoutePriority(int destination,
 unsigned char * path, int priority) {
 }
-//RoutingItem * RoutingTable::getRoutes(int as_name){
-//}
-//RoutingItem * RoutingTable::getRouteByPath(int as_name,
-//unsigned char * path){
-//}
+
 void RoutingTable::print_table() {
   cout << "=========Routing table content=========" << endl;
   for(int i=0; i < RoutingTable::size; i++) {
     RoutingItem item = items[i];
-    cout << item.as_name << " : "; 
+    cout << item.destination << " : "; 
     for(int i = 0; i < item.path_length; i++) {
       cout << (int)item.path[i] << " ";
     }

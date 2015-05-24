@@ -13,7 +13,7 @@ using namespace std;
 
 class RoutingItem {
   public:
-    int as_name; // Instead of using IP prefixes, we use AS name to indicate AS
+    int destination; // Instead of using IP prefixes, we use AS name to indicate AS
     int next_hop; // next router to send the packet to
     int path_length; 
     unsigned char * path; //Format: "1 2 3 4"
@@ -22,7 +22,7 @@ class RoutingItem {
     int getNextHop() { return next_hop; }
     void print() { 
       cout << "============ROUTING ITEM============" << endl;
-      cout << "Name: " << as_name << endl;
+      cout << "Name: " << destination << endl;
       cout << "Next Hop: " << next_hop << endl;
       cout << "Path Length: " << path_length << endl;
       cout << "Priority: " << priority << endl;
@@ -31,6 +31,17 @@ class RoutingItem {
         cout << (int)path[i] << " ";
       }
       cout << endl;
+    }
+    string toString() {
+      string data = "";
+      data += to_string(destination) + ',' + 
+        to_string(next_hop) + ',' + to_string(path_length) +
+        ',' + to_string(priority) + ',';
+      for (int i=0; i < path_length; i++) {
+        data += to_string((int)path[i]);
+        if ( i < (path_length - 1)) data += " ";
+      }
+      return data;
     }
 };
 
@@ -41,23 +52,26 @@ class RoutingTable {
 
   public:
     int getSize() { return RoutingTable::size; }
+    void addItem(RoutingItem item);
     RoutingItem * getItems() { return RoutingTable::items; }
     RoutingItem getItem(int index) { return RoutingTable::items[index]; }
     void addRoute(int as_name, int path_length, unsigned char * path, int priority);
-    int removeRoute(int destination, int path_length, unsigned char * path);
+    //int removeRoute(int destination, int path_length, unsigned char * path);
     int removeRoute(int destination);
     int containNode(RoutingItem item, int as_name);
     void setRoutePriority(int as_name, unsigned char * path, int priority);
-    int queryRoute(int as_name);
-    RoutingItem * getRoutes(int as_name);
-    RoutingItem * getRouteByPath(int as_name, unsigned char * path);
+    RoutingItem * queryRoute(int destination);
     RoutingItem * findRoute(int as_name, int path_length, unsigned char * path);
-    int indexOfRoute(int as_name, int path_length, unsigned char * path);
+    //int indexOfRoute(int as_name, int path_length, unsigned char * path);
     void print_table();
 };
 
 #define NB_OFF 0
 #define NB_ON 1
+#define SETUP_CONFIG_FILENAME "as_configs"
+#define SETUP_NEIGHBOUR_FILENAME "neighbours.csv"
+#define ROUTING_TABLE_FILENAME "routing_table.csv"
+#define PACKET_LENGTH 1500
 class As {
   string port;
   int name;
@@ -103,7 +117,7 @@ class As {
   unsigned char * serialize_UPDATE(unsigned char * buffer, struct update_msg *value, int *size);
 
   public:
-    As(string, string);
+    As(string, string, string);
 
     string getPort() { return port; }
     int getName() { return name; }
@@ -115,6 +129,8 @@ class As {
     void setup_listener();
     void setup_as(string);
     void neighbours_from_file(string);
+    void save_rt(string);
+    void rt_from_file(string);
 
     void keep_alive();
     void send_OPEN();
@@ -141,5 +157,7 @@ class As {
     void notify_adding(update_msg);
     void notify_removing(update_msg);
     void advertise_routes(int as_name); // send rt items to an AS
+    // Simulate clients' IP packet communication
+    void client_communication_simulation(); 
     void run();
 };
