@@ -60,7 +60,7 @@ class RoutingTable {
     int removeRoute(int destination);
     int containNode(RoutingItem item, int as_name);
     void setRoutePriority(int as_name, unsigned char * path, int priority);
-    RoutingItem * queryRoute(int destination);
+    RoutingItem queryRoute(int destination);
     RoutingItem * findRoute(int as_name, int path_length, unsigned char * path);
     //int indexOfRoute(int as_name, int path_length, unsigned char * path);
     void print_table();
@@ -69,11 +69,13 @@ class RoutingTable {
 #define NB_OFF 0
 #define NB_ON 1
 #define SETUP_CONFIG_FILENAME "as_configs"
+#define CLIENT_CONFIG_FILENAME "client_configs"
 #define SETUP_NEIGHBOUR_FILENAME "neighbours.csv"
 #define ROUTING_TABLE_FILENAME "routing_table.csv"
 #define PACKET_LENGTH 1500
 class As {
   string port;
+  string client_port;
   int name;
   //map<string, string> neighbours;
   //map<string, int> neighbours_state;
@@ -117,17 +119,21 @@ class As {
   unsigned char * serialize_UPDATE(unsigned char * buffer, struct update_msg *value, int *size);
 
   public:
-    As(string, string, string);
+    As(string, string, string, string);
 
     string getPort() { return port; }
     int getName() { return name; }
 
     int bgp_send(char *port, unsigned char *msg, const int msg_len);
     void bgp_listen(char *port);
+    int client_send(char *port, unsigned char *msg, const int msg_len);
+    void client_listen(char *port);
 
     map<int, string> setup_neighbours(string);
     void setup_listener();
+    void setup_client_listener();
     void setup_as(string);
+    void setup_client(string);
     void neighbours_from_file(string);
     void save_rt(string);
     void rt_from_file(string);
@@ -150,6 +156,7 @@ class As {
     void add_route(update_msg, int priority);
     void remove_route(update_msg);
     unsigned char * handle_msg(unsigned char const* msg, int bytes_received, int * byte_sending);
+    unsigned char * client_handle_msg(unsigned char * msg, int bytes_received, int * byte_sending);
 
     void withdrawn_nb_from_rt(int as_name);
     void add_nb_to_rt(int as_name);

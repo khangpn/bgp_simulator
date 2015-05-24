@@ -14,7 +14,7 @@ unsigned char * path, int priority=0) {
     item.path_length = path_length;
     item.path = path;
     item.priority = priority;
-    item.next_hop = path[path_length - 1];
+    item.next_hop = (int)path[path_length - 1];
 
     RoutingTable::items[RoutingTable::size] = item;
     RoutingTable::size++;
@@ -69,20 +69,20 @@ int RoutingTable::containNode(RoutingItem item, int as_name) {
   return 0;
 }
 
-RoutingItem * RoutingTable::queryRoute(int destination) {
-  RoutingItem * best = new RoutingItem;
+RoutingItem RoutingTable::queryRoute(int destination) {
+  RoutingItem best;
   for(int i=0; i < RoutingTable::size; i++) {
     RoutingItem current = RoutingTable::items[i];
     if (current.destination == destination) {
-      if ((best->destination == 0) || 
-      (current.priority > best->priority) ||
-      (current.priority == best->priority && 
-      current.path_length < best->path_length)) {
-        best = &current;
+      if ((best.destination == 0) || 
+      (current.priority > best.priority) ||
+      (current.priority == best.priority && 
+      current.path_length < best.path_length)) {
+        best = current;
       }
     }
   }
-  if (best->destination == 0) return NULL;
+  //if (best->destination == 0) return NULL;
   return best;
 }
 
