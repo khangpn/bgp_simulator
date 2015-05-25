@@ -176,6 +176,7 @@ class As {
     void notify_removing(update_msg);
     void advertise_routes(int as_name); // send rt items to an AS
     // Simulate clients' IP packet communication
+    void send_client_packet(int src, int dest); 
     void client_communication_simulation(); 
     void run();
 };

@@ -471,7 +471,16 @@ unsigned char * As::client_handle_msg(unsigned char *msg, const int bytes_receiv
   if (bytes_received > 0) {
     cout << "===========CLIENT MSG RECEIVED============" << endl;
     Packet p;
-	  p.deserialize(msg, PACKET_MAX_LEN);
+	  p.deserialize(msg, *size);
+    int dest = p.getDestip();
+    int src = p.getSourceip();
+    if (As::name != dest) {
+      cout << "===========FORWARDING MSG TO " << dest << "==========" << endl;
+      thread sending_thread(&As::send_client_packet, this, src, dest);
+      sending_thread.detach();
+    } else {
+      cout << "===========CLIENT MSG REACH DEST==========" << endl;
+    }
     p.Print();
   }
   *size = 1;
@@ -671,28 +680,28 @@ void As::self_advertise() {
   }
 }
 
+void As::send_client_packet(int src, int dest) {
+  RoutingItem item = rt.queryRoute(dest);
+  if ( item.destination != 0 ) {
+    cout << "============CLIENT COMMUNICATION===========" << endl;
+	  Packet p = Packet(4, 0, 0, 0, 0, 255, 6, src, dest);
+    int next_hop = item.next_hop;
+
+    char port[10];
+    strcpy(port, neighbours_client[next_hop].c_str());
+
+    int size = 0;
+	  unsigned char * msg = p.serialize();
+
+    int status = client_send(port, msg, 20);
+  }
+}
+
 void As::client_communication_simulation() {
   if (As::name == 1) {
     while (true) {
       int destination = 3; // for testing 
-      RoutingItem item = rt.queryRoute(destination);
-      if ( item.destination != 0 ) {
-        cout << "============CLIENT COMMUNICATION===========" << endl;
-        item.print();
-
-	      Packet p = Packet(4, 0, 0, 0, 0, 255, 6, As::name, destination);
-        int next_hop = item.next_hop;
-
-        char port[10];
-        strcpy(port, neighbours_client[next_hop].c_str());
-        cout << "PORT: " << port << endl;
-
-        int size = 0;
-	      unsigned char * msg = p.serialize();
-        //unsigned char *msg = As::generate_HEADER(4, &size);
-
-        int status = client_send(port, msg, 20);
-      }
+      As::send_client_packet(As::name, destination);
       sleep(3);
     }
   }
