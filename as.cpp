@@ -44,8 +44,8 @@ void As::setup_as(string as_config) {
 	  std::getline(lineStream, as_name, ',');
 	  std::getline(lineStream, as_port, ',');
 	  std::getline(lineStream, client_port, ',');
-    //As::name = atoi(as_name.c_str());
-    As::name = std::stoi(as_name);
+    As::name = atoi(as_name.c_str());
+    //As::name = std::stoi(as_name);
     cout << "NAME: " << As::name << endl;
     As::port = as_port;
     cout << "PORT: " << As::port << endl;
@@ -78,8 +78,8 @@ map<int, string> As::setup_neighbours(string neighbours_config)
 	    std::getline(lineStream, nb_port, ',');
 	    std::getline(lineStream, client_port, ',');
 
-      //int nb_name = atoi( tmp_name.c_str() ); // stoi was incompatible with a Cygwin setup
-      int nb_name = std::stoi(tmp_name);
+      int nb_name = atoi( tmp_name.c_str() ); // stoi was incompatible with a Cygwin setup
+      //int nb_name = std::stoi(tmp_name);
 	    neighbours[nb_name] = nb_port;
 	    neighbours_client[nb_name] = client_port;
 	    //neighbours_state[nb_name] = 0;
@@ -135,17 +135,17 @@ void As::rt_from_file(string rt_config_filename) {
       cout << path << endl; //Format: "1 2 3 4"
 
       RoutingItem item;
-      item.destination = std::stoi(destination);
-      item.next_hop = std::stoi(next_hop);
-      item.path_length = std::stoi(path_length); 
-      item.priority = std::stoi(priority);
+      item.destination = atoi( destination.c_str() ); // atoi( XX.c_str() -- stoi was incompatible with a Cygwin setup
+      item.next_hop = atoi( next_hop.c_str() );
+      item.path_length = atoi( path_length.c_str() );
+      item.priority = atoi( priority.c_str() );
       stringstream pathStream(path);
       string as_node;
       item.path = (unsigned char *)malloc(item.path_length);
       int i = 0;
       while (getline(pathStream, as_node, ' ')) {
         //cout << "NODE: " << as_node << endl;
-        item.path[i] = std::stoi(as_node);
+        item.path[i] = atoi(as_node.c_str());
         i++;
       }
       As::rt.addItem(item);

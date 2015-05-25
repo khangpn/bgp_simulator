@@ -572,16 +572,12 @@ class Network // (unfinished network definition)
 	// array (or map<ASNAME>) of Router (added here with addRouter)
 
 public:
-	Network(){};// Constructor
-	/*
-	 * create a basic IPv4 header
-	 */
-		~Network(){};// Destructor
+	Network(){}; // Network's Constructor
+	~Network(){}; // Network's Destructor
 
 	void addRouter( Router router );
 	void removeRouter( Router router );
 	void transferPacket(Router targetRouter, Router senderRouter, Packet packet); // could be just ASNAME instead of Router?
-
 
 }; // class Network
 

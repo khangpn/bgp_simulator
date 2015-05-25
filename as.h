@@ -5,10 +5,11 @@
 #include <unistd.h>
 #include <thread>
 #include <fstream>
-#include <string> // for std::string
+#include <string> // for std::string, std::to_string
 #include <sstream> // for std::stringstream
 #include <map> // for std::map
 #include <stdlib.h> // for std::sleep
+
 using namespace std;
 
 class RoutingItem {
@@ -34,11 +35,22 @@ class RoutingItem {
     }
     string toString() {
       string data = "";
-      data += to_string(destination) + ',' + 
-        to_string(next_hop) + ',' + to_string(path_length) +
-        ',' + to_string(priority) + ',';
+      char tmps [200];// for temp storing a string, to avoid using C++11 std::to_string
+
+      snprintf(tmps,199,"%s,%s,%s,%s", destination, next_hop, path_length, priority);
+      //data += to_string(destination) + ',' +
+      //  to_string(next_hop) + ',' + to_string(path_length) +
+      //  ',' + to_string(priority) + ',';
+      data = tmps;
+
+      int tmpi;
       for (int i=0; i < path_length; i++) {
-        data += to_string((int)path[i]);
+
+    	//data += std::to_string((int)path[i]);
+        tmpi = (int)path[i];
+        snprintf(tmps, 199, "%i", tmpi);
+        data += tmps;
+
         if ( i < (path_length - 1)) data += " ";
       }
       return data;
