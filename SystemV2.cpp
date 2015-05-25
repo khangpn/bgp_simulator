@@ -58,7 +58,7 @@ public:
 		if ( buf == NULL )
 		{
 			buf = (unsigned char*)malloc( PACKET_MAX_LEN );
-			printf("initA(): buf is now %4x\n", buf);
+			//printf("initA(): buf is now %4x\n", buf);
 		}
 		iph.ihl = 5; // default and minimum header length of five 32b long words
 		iph.ver = 4; // 4 for IPv4
@@ -71,7 +71,7 @@ public:
 	Packet()
 	{
 		printf("jhdebug hellofrom _shorter_ constructor\n");
-		printf("buf is now %04x (::Packet,shorter)\n", buf);
+		//printf("buf is now %04x (::Packet,shorter)\n", buf);
 		//Packet(4, 0, 0, 0, 0, 0, 0, 0, 0); // blank IPv4 packet
 		initA();
 		if (buf == NULL) { printf("### ERROR: memory allocation error. (::Packet,shorter)"); exit(2); }
