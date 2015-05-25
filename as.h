@@ -35,24 +35,24 @@ class RoutingItem {
     }
     string toString() {
       string data = "";
-      char tmps [200];// for temp storing a string, to avoid using C++11 std::to_string
+      //char tmps [200];// for temp storing a string, to avoid using C++11 std::to_string
 
-      snprintf(tmps,199,"%i,%i,%i,%i", destination, next_hop, path_length, priority);
-      //data += to_string(destination) + ',' +
-      //  to_string(next_hop) + ',' + to_string(path_length) +
-      //  ',' + to_string(priority) + ',';
-      data = tmps;
+      //snprintf(tmps,199,"%i,%i,%i,%i", destination, next_hop, path_length, priority);
+      data += to_string(destination) + ',' +
+        to_string(next_hop) + ',' + to_string(path_length) +
+        ',' + to_string(priority) + ',';
+      //data = tmps;
 
-      int tmpi;
-      string tempString;
+      //int tmpi;
+      //string tempString;
       for (int i=0; i < path_length; i++) {
 
-    	//data += std::to_string((int)path[i]);
-        tmpi = (int)path[i];
-        snprintf(tmps, 199, "%i", tmpi);
-        tempString = "";
-        tempString = tmps;
-        data += tempString;
+    	  data += std::to_string((int)path[i]);
+        //tmpi = (int)path[i];
+        //snprintf(tmps, 199, "%i", tmpi);
+        //tempString = "";
+        //tempString = tmps;
+        //data += tempString;
 
         if ( i < (path_length - 1)) data += " ";
       }
@@ -180,7 +180,9 @@ class As {
     void notify_adding(update_msg);
     void notify_removing(update_msg);
     void advertise_routes(int as_name); // send rt items to an AS
+    void send_client_packet(int src, int dest);
     // Simulate clients' IP packet communication
     void client_communication_simulation(); 
+    void print();
     void run();
 };

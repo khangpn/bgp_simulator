@@ -431,6 +431,7 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
     // Handle UPDATE msg
     if (header_str.type == UPDATE_TYPE) {
       update_msg msg_update = deserialize_UPDATE(msg_body);
+      cout << "===========RECEIVED UPDATE FROM: " << as_name <<"a ============" << endl;
       if ((int)msg_update.withdrawn_length > 0) {
         As::remove_route(msg_update);
         // notify the network
@@ -463,7 +464,7 @@ unsigned char * As::client_handle_msg(unsigned char *msg, const int bytes_receiv
   unsigned char *msg_return, status[1];
   if (bytes_received > 0) {
     Packet p;
-	  p.deserialize(msg, *size);
+	  p.deserialize(msg, bytes_received);
     int dest = p.getDestip();
     int src = p.getSourceip();
     cout << "===========CLIENT MSG RECEIVED FROM " << src <<"============" << endl;
@@ -653,7 +654,12 @@ void As::send_client_packet(int src, int dest) {
     char port[10];
     strcpy(port, neighbours_client[next_hop].c_str());
 
-    int size = 0;
+    unsigned char *message;
+    message = (unsigned char*)malloc(100);
+    int messageSize = 1;
+    message[0] = (unsigned char)0x40;
+    p.setMessage(message, messageSize);
+
 	  unsigned char * msg = p.serialize();
 
     int status = client_send(port, msg, 20);
