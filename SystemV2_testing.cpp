@@ -31,8 +31,9 @@ int main(void)
 	buf = p.serialize();
 
 	printf("\n--\n\n"); // now test with serialized packet as bitstream in buffer buf
+	//Packet in = Packet(IP_PACKET, 0, 0, 0, 0, 31, 3, 0x1122, 0x3344); // yes, stoopid to initialize
 
-	Packet in = Packet(IP_PACKET, 0, 0, 0, 0, 31, 3, 0x1122, 0x3344); // yes, stoopid to initialize
+	Packet in;
 	ip_header_t iph;
 	iph = in.deserialize( buf, p.getPacketLength() );
 	in.Print();
@@ -46,7 +47,8 @@ int main(void)
 	//p.recalculateChecksum();
 	printf("Packet (header) checksum: %4x (again)\n", in.getChecksum() );
 	in.Print();
-
+/*
+*/
 	//Code reserve for more testing:
 	// 	buf = (unsigned char*)malloc( PACKET_MAX_LEN );
 	//

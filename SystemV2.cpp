@@ -52,12 +52,22 @@ unsigned char *message = NULL;
 ip_header_t iph;
 
 public:
-	// Packet() {;}; // Empty constructor
-	~Packet() {;};
+	Packet()
+	{
+		Packet(4, 0, 0, 0, 0, 0, 0, 0, 0); // blank IPv4 packet
+	}; // Empty constructor
+
+	// TODO "deserialize-constructor":
+	// Packet(unsigned char *, int size)
+
+	~Packet()
+	{
+		remove();
+	};
 
 	/*
 	 * Constructor
-	 * IP packet
+	 * IP packet header only (add message with setMessage)
 	 * - does not support optional headers
 	 * - hard-coded protocol setting of 6=TCP
 	 */
@@ -164,15 +174,18 @@ public:
 	void remove(); 				// remove packet (free memory)
 };
 
-void Packet::Print()
+void Packet::Print() // expects that the buf is filled
 {
+	unsigned char* tempBuf = (unsigned char*)malloc( PACKET_MAX_LEN );
+	tempBuf = this->serialize();
 	printf("Packet contents (in two lines after this) (format: {'index:hexvalue '}):\n");
 	for(int i =0; i<iph.len; i++)
 	{
-		printf("%2i:%02x ", i, (unsigned char)buf[i] );
+		printf("%2i:%02x ", i, (unsigned char)tempBuf[i] );
 		if ( (i>1) && (i%11==0) )
 			printf("\n");
 	}
+	free(tempBuf);
 
 	// print newline - but do not if printing of ipheader happened to already have just printed newline
 	if ( iph.len%11)
@@ -213,9 +226,9 @@ void Packet::recalculateChecksum()
 
 	// serialize and calculate new checksum
 	tempBuf = this->serialize();
-	newChecksum = IPchecksum( this->buf, this->getHeaderLengthBytes() );
+	newChecksum = IPchecksum( tempBuf, this->getHeaderLengthBytes() );
 
-	// finish: clear reserverd memory and set new checksum
+	// finish: clear reserved memory and set new checksum
 	free(tempBuf);
 	this->setChecksum( newChecksum );
 }
@@ -233,11 +246,12 @@ void Packet::setChecksum( unsigned short checksum )
 
 /*
  * Receive incoming buffer to Packet and form IP header structure
+ * - copies all data from incoming parameter buf
+ * TODO: needs not return anything
  * @returns ip_header_t or NULL if incoming packet is not acceptable as IPv4 header
  */
 ip_header_t Packet::deserialize( unsigned char *buf, int size )
 {
-	//ip_header_t iph;
 	int error = 0; // count errors
 
 	// Initial test, for minimum length requirement.
@@ -271,8 +285,8 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
 
 	iph.checksum = N2H( buf[10] <<8 + buf[11] );
 
-	iph.sourceip = (int)buf[12];
-	iph.destip = (int)buf[16];
+	iph.sourceip = buf[12]<<24 + buf[13]<<16+ buf[14]<<8+buf[15];
+	iph.destip = buf[16]<<24 + buf[17]<<16+ buf[18]<<8+buf[19];
 
 	// the actual validity tests:
 
@@ -293,9 +307,12 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
 
 	// TODO is this correct
 	// TODO old message memory is not released?
-	if (message != NULL)
-		free(message);
-	message = &buf[20];
+	if (this->message != NULL)
+		free(this->message);
+
+	this->message = (unsigned char*)malloc(iph.len);
+	memcpy(this->message, &buf[20], iph.len-iph.ihl*4 ); // TODO
+	//message = &buf[20];
 
 	return iph;
 }
@@ -311,7 +328,7 @@ unsigned char *Packet::serialize()
 
 			unsigned char byte;
 			int i = 0;
-			buf = (unsigned char*)malloc(iph.len);
+			unsigned char *buf = (unsigned char*)malloc(iph.len); // allocate all new buf and mem
 			if (buf == NULL) { printf("### ERROR: memory allocation error."); exit(2); }
 
 			// first byte
@@ -350,6 +367,7 @@ unsigned char *Packet::serialize()
 	/**/
 
 	// i should now be 20 (no optional headers)
+	if (i!=20) { printf("### ERROR i != 20"); exit(1); }
 	memcpy(&buf[i], this->message, getMessageLength() );
 
 	return buf;
@@ -379,14 +397,17 @@ int Packet::getMessageLength()
 }
 
 /*
- * set the message (=payload) portion of packet
- * - does not copy data
+ * set the message payload portion of packet
+ * - DOES COPY DATA (old behaviour: does not copy data)
  * - message is not included in checksum
  * - if changing message changes message size, the packet size length changes and header checksum must be changed
  */
 void Packet::setMessage( unsigned char *message, int size )
 {
-	this->message = message;
+	//this->message = message;
+	this->message = (unsigned char*)malloc(size); // allocate new mem
+	memcpy(this->message, message, size);
+
 	setMessageLength( size );
 	this->recalculateChecksum();
 }
