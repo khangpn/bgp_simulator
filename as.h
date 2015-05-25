@@ -37,7 +37,7 @@ class RoutingItem {
       string data = "";
       char tmps [200];// for temp storing a string, to avoid using C++11 std::to_string
 
-      snprintf(tmps,199,"%s,%s,%s,%s", destination, next_hop, path_length, priority);
+      snprintf(tmps,199,"%i,%i,%i,%i", destination, next_hop, path_length, priority);
       //data += to_string(destination) + ',' +
       //  to_string(next_hop) + ',' + to_string(path_length) +
       //  ',' + to_string(priority) + ',';
