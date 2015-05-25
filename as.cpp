@@ -471,12 +471,8 @@ unsigned char * As::client_handle_msg(unsigned char *msg, const int bytes_receiv
   if (bytes_received > 0) {
     cout << "===========CLIENT MSG RECEIVED============" << endl;
     Packet p;
-	  ip_header_t iph;
-	  unsigned char *buf = (unsigned char*)malloc( PACKET_MAX_LEN );
-	  iph = p.deserialize(buf, PACKET_MAX_LEN);
-    //ut << msg << endl;
-    cout << iph.sourceip << ":" << iph.destip << endl;
-    free(buf);
+	  p.deserialize(msg, PACKET_MAX_LEN);
+    p.Print();
   }
   *size = 1;
   status[0] = 0;
