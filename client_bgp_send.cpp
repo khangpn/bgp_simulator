@@ -96,19 +96,19 @@ serv_addr.sin_port = htons(portno);
     /* ========== END ========== */
 
     /* Receiving message */
-    //std::cout << "Waiting to recieve data..."  << std::endl;
-    //ssize_t bytes_received;
-    //unsigned char incoming_data_buffer[ INCOMING_DATA_BUFFER_SIZE ];
-    //bytes_received = recv(socketfd, incoming_data_buffer,INCOMING_DATA_BUFFER_SIZE, 0);
-    //// If no data arrives, the program will just wait here until some data arrives.
-    //if (bytes_received == 0) std::cout << "host shut down." << std::endl ;
-    //if (bytes_received == -1)std::cout << "receive error!" << std::endl ;
-    //std::cout << bytes_received << " bytes received :" << std::endl ;
-    //std::cout << incoming_data_buffer << std::endl;
-    //if ( bytes_received > 0 ) {
-    //    int len = 0;
-    //    unsigned char * msg_return = As::client_handle_msg(incoming_data_buffer, bytes_received, &len);
-    //}
+    std::cout << "Waiting to recieve data..."  << std::endl;
+    ssize_t bytes_received;
+    unsigned char incoming_data_buffer[ INCOMING_DATA_BUFFER_SIZE ];
+    bytes_received = recv(socketfd, incoming_data_buffer,INCOMING_DATA_BUFFER_SIZE, 0);
+    // If no data arrives, the program will just wait here until some data arrives.
+    if (bytes_received == 0) std::cout << "host shut down." << std::endl ;
+    if (bytes_received == -1)std::cout << "receive error!" << std::endl ;
+    std::cout << bytes_received << " bytes received :" << std::endl ;
+    std::cout << incoming_data_buffer << std::endl;
+    if ( bytes_received > 0 ) {
+        int len = 0;
+        unsigned char * msg_return = As::client_handle_msg(incoming_data_buffer, bytes_received, &len);
+    }
     /* ========== END ========== */
 
     close(socketfd);
