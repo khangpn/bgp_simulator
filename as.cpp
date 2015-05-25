@@ -189,8 +189,8 @@ void As::setup_client_listener()
   if ( ( strlen(listen_port)<6 )
 	&& ( atoi(listen_port) > 0 )
 	&& ( atoi(listen_port) < 65536 ) ) {
-	  cout << "Client listening port: " << listen_port << endl;
 	  client_listen(listen_port);
+	  cout << "Client listening port: " << listen_port << endl;
 	}
 	else {
 	  cout << "ERROR: Listen port syntax error."<< endl;
@@ -468,14 +468,15 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
 
 unsigned char * As::client_handle_msg(unsigned char *msg, const int bytes_received, int * size) {
   unsigned char *msg_return, status[1];
-  cout << "===========CLIENT MSG============" << endl;
   if (bytes_received > 0) {
-    //Packet p;
-	  //ip_header_t iph;
-	  //unsigned char *buf = (unsigned char*)malloc( PACKET_MAX_LEN );
-	  //iph = p.deserialize(buf, PACKET_MAX_LEN);
-    cout << msg << endl;
-    //cout << iph.sourceip << ":" << iph.destip << endl;
+    cout << "===========CLIENT MSG RECEIVED============" << endl;
+    Packet p;
+	  ip_header_t iph;
+	  unsigned char *buf = (unsigned char*)malloc( PACKET_MAX_LEN );
+	  iph = p.deserialize(buf, PACKET_MAX_LEN);
+    //ut << msg << endl;
+    cout << iph.sourceip << ":" << iph.destip << endl;
+    free(buf);
   }
   *size = 1;
   status[0] = 0;
@@ -687,16 +688,14 @@ void As::client_communication_simulation() {
         int next_hop = item.next_hop;
 
         char port[10];
-        strcpy(port, neighbours[next_hop].c_str());
-        cout << "PORT: " << neighbours[next_hop] << endl;
-
-	      //unsigned char * buf = (unsigned char*)malloc( p.getHeaderLengthBytes() );
-	      //buf = p.serialize();
+        strcpy(port, neighbours_client[next_hop].c_str());
+        cout << "PORT: " << port << endl;
 
         int size = 0;
-        unsigned char *msg = As::generate_HEADER(4, &size);
+	      unsigned char * msg = p.serialize();
+        //unsigned char *msg = As::generate_HEADER(4, &size);
 
-        int status = client_send(port, msg, size);
+        int status = client_send(port, msg, 20);
       }
       sleep(3);
     }
@@ -720,8 +719,8 @@ void As::run() {
   //thread advertise_thread(&As::self_advertise, this);
   //advertise_thread.detach();
 
-  //thread client_thread(&As::client_communication_simulation, this);
-  //client_thread.detach();
+  thread client_thread(&As::client_communication_simulation, this);
+  client_thread.detach();
 
   As::keep_alive();
 }
