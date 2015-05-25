@@ -25,7 +25,7 @@ void As::client_listen(char *port)
   // empty. Therefor we use the memset function to make sure all fields are NULL.     
   memset(&host_info, 0, sizeof host_info);
 
-  std::cout << "Setting up the structs..."  << std::endl;
+  //std::cout << "Setting up the structs..."  << std::endl;
 
   host_info.ai_family = AF_INET; // NO! lets use IPv4 -- AF_UNSPEC;     // IP version not specified. Can be both.
   host_info.ai_socktype = SOCK_STREAM; // Use SOCK_STREAM for TCP or SOCK_DGRAM for UDP.
@@ -40,7 +40,7 @@ void As::client_listen(char *port)
   /* ========== END ========== */
     
   /* Setting up socket */
-  std::cout << "Creating a socket, port:" << port << "..."  << std::endl;
+  //std::cout << "Creating a socket, port:" << port << "..."  << std::endl;
   int socketfd ; // The socket descripter
   socketfd = socket(host_info_list->ai_family, host_info_list->ai_socktype, 
   host_info_list->ai_protocol);
@@ -48,7 +48,7 @@ void As::client_listen(char *port)
   /* ========== END ========== */
 
   /* Bind to the port */
-  std::cout << "Binding socket..."  << std::endl;
+  //std::cout << "Binding socket..."  << std::endl;
   // we make use of the setsockopt() function to make sure the port is not in use.
   // by a previous execution of our code. (see man page for more information)
   int yes = 1;
@@ -59,7 +59,7 @@ void As::client_listen(char *port)
 
   /* Listen to the port */
   int queue_len = 5; // How many cli_requests could be on hold
-  std::cout << "Listen()ing for connections..."  << std::endl;
+  //std::cout << "Listen()ing for connections..."  << std::endl;
   status =  listen(socketfd, queue_len);
   if (status == -1)  std::cout << "listen error" << std::endl ;
   /* ========== END ========== */
@@ -77,19 +77,19 @@ void As::client_listen(char *port)
     }
     else
     {
-        std::cout << "Connection accepted. Using new socketfd : "  <<  new_sd << std::endl;
+        //std::cout << "Connection accepted. Using new socketfd : "  <<  new_sd << std::endl;
     }
     /* ========== END ========== */
 
     /* Receiving message */
-    std::cout << "Waiting to receive data..."  << std::endl;
+    //std::cout << "Waiting to receive data..."  << std::endl;
     ssize_t bytes_received;
     unsigned char incoming_data_buffer[INCOMING_DATA_BUFFER_SIZE];
     bytes_received = recv(new_sd, incoming_data_buffer,INCOMING_DATA_BUFFER_SIZE, 0);
     // If no data arrives, the program will just wait here until some data arrives.
     if (bytes_received == 0) std::cout << "host shut down." << std::endl ;
     if (bytes_received == -1)std::cout << "receive error!" << std::endl ;
-    std::cout << bytes_received << " bytes received : ";// << std::endl ;
+    //std::cout << bytes_received << " bytes received : ";// << std::endl ;
     if ( bytes_received > 0 ) {
         //incoming_data_buffer[ bytes_received ] = '\0';
         //NOTE: need to write the handler for  every message type

@@ -26,7 +26,7 @@ int As::client_send(char *port, unsigned char *msg, const int msg_len)
   // empty. Therefor we use the memset function to make sure all fields are NULL.     
   memset(&host_info, 0, sizeof host_info);
 
-  std::cout << "Setting up the structs..."  << std::endl;
+  //std::cout << "Setting up the structs..."  << std::endl;
 
   //host_info.ai_family = AF_UNSPEC;     // IP version not specified. Can be both.
   host_info.ai_family = AF_INET; // we are using IPv4!
@@ -45,7 +45,7 @@ int As::client_send(char *port, unsigned char *msg, const int msg_len)
   //while(true)
   //{
     /* Setting up socket */
-    std::cout << "Creating a socket..."  << std::endl;
+    //std::cout << "Creating a socket..."  << std::endl;
     int socketfd ; // The socket descripter
     socketfd = socket(host_info_list->ai_family, host_info_list->ai_socktype, 
     host_info_list->ai_protocol);
@@ -71,7 +71,7 @@ serv_addr.sin_port = htons(portno);
 	// cf. http://www.linuxhowtos.org/C_C++/socket.htm
 	//do
 	//{
-		std::cout << "Connect()ing... to sockedfd:"  << socketfd << std::endl;
+		//std::cout << "Connect()ing... to sockedfd:"  << socketfd << std::endl;
 		status = connect(socketfd, host_info_list->ai_addr, host_info_list->ai_addrlen);
 		// If the connection can not be established, retry in 2 seconds
 		if (status == -1) {
@@ -88,7 +88,7 @@ serv_addr.sin_port = htons(portno);
     /* ========== END ========== */
 
     /* Sending message */
-    std::cout << "send()ing message to:" << port << "..."  << std::endl;
+    //std::cout << "send()ing message to:" << port << "..."  << std::endl;
     int len;
     ssize_t bytes_sent;
     //len = sizeof(msg);

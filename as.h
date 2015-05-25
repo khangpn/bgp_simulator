@@ -84,6 +84,9 @@ class RoutingTable {
 #define SETUP_NEIGHBOUR_FILENAME "neighbours.csv"
 #define ROUTING_TABLE_FILENAME "routing_table.csv"
 #define PACKET_LENGTH 1500
+#define KEEPALIVE_INTERVAL 5
+#define OPEN_INTERVAL 5
+#define CLIENT_MSG_INTERVAL 5
 class As {
   string port;
   string client_port;
@@ -171,7 +174,6 @@ class As {
 
     void withdrawn_nb_from_rt(int as_name);
     void add_nb_to_rt(int as_name);
-    void self_advertise();
     void notify_adding(update_msg);
     void notify_removing(update_msg);
     void advertise_routes(int as_name); // send rt items to an AS

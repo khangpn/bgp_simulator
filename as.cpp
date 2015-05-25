@@ -17,6 +17,7 @@ As::As (string as_config, string neighbours_config, string rt_config) {
   neighbours = setup_neighbours(neighbours_config);
   //cout << ">>> Setting up routing table..." << endl;
   As::rt_from_file(rt_config);
+  this->print();
 }
 
 void As::neighbours_from_file(string config) {
@@ -122,12 +123,6 @@ void As::rt_from_file(string rt_config_filename) {
 	    std::getline(lineStream, path_length, ',');
 	    std::getline(lineStream, priority, ',');
 	    std::getline(lineStream, path, ',');
-      
-      cout << destination << endl;
-      cout << next_hop << endl;
-      cout << path_length << endl; 
-      cout << priority << endl;
-      cout << path << endl; //Format: "1 2 3 4"
 
       RoutingItem item;
       item.destination = atoi( destination.c_str() ); // atoi( XX.c_str() -- stoi was incompatible with a Cygwin setup
@@ -139,7 +134,6 @@ void As::rt_from_file(string rt_config_filename) {
       item.path = (unsigned char *)malloc(item.path_length);
       int i = 0;
       while (getline(pathStream, as_node, ' ')) {
-        //cout << "NODE: " << as_node << endl;
         item.path[i] = atoi(as_node.c_str());
         i++;
       }
@@ -155,7 +149,7 @@ void As::rt_from_file(string rt_config_filename) {
  */
 void As::setup_listener()
 {
-  cout << ">>> Setting up listener..." << endl;
+  //cout << ">>> Setting up listener..." << endl;
   char listen_port[10];
   strcpy(listen_port, As::port.c_str());
 
@@ -163,7 +157,7 @@ void As::setup_listener()
   if ( ( strlen(listen_port)<6 )
 	&& ( atoi(listen_port) > 0 )
 	&& ( atoi(listen_port) < 65536 ) ) {
-	  cout << "Listening port: " << listen_port << endl;
+	  //cout << "Listening port: " << listen_port << endl;
 	  bgp_listen(listen_port);
 	}
 	else {
@@ -176,7 +170,7 @@ void As::setup_listener()
  */
 void As::setup_client_listener()
 {
-  cout << ">>> Setting up client listener..." << endl;
+  //cout << ">>> Setting up client listener..." << endl;
   char listen_port[10];
   strcpy(listen_port, As::client_port.c_str());
 
@@ -185,7 +179,7 @@ void As::setup_client_listener()
 	&& ( atoi(listen_port) > 0 )
 	&& ( atoi(listen_port) < 65536 ) ) {
 	  client_listen(listen_port);
-	  cout << "Client listening port: " << listen_port << endl;
+	  //cout << "Client listening port: " << listen_port << endl;
 	}
 	else {
 	  cout << "ERROR: Listen port syntax error."<< endl;
@@ -209,16 +203,18 @@ void As::keep_alive()
           int status = bgp_send(port, msg, size);
           free(msg);
           cout << "=======================" << endl;
-          cout << "KEEPALIVE SENT TO: " << port << endl;
+          cout << "KEEPALIVE SENT TO: " << as_name << endl;
 
           if (status == -1) {
+            cout << "=======================" << endl;
+            cout << "AS_" << port << " IS DOWN" << endl;
             As::switch_neighbour(as_name, NB_OFF);
             As::withdrawn_nb_from_rt(as_name);
           } 
         }
       }
     } 
-    sleep(3);
+    sleep(KEEPALIVE_INTERVAL);
   }
 }
 
@@ -242,7 +238,7 @@ void As::send_OPEN()
         }
       }
     } 
-    sleep(3);
+    sleep(OPEN_INTERVAL);
   } 
 }
 
@@ -421,6 +417,8 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
       //string as_name = to_string((int)open_str.my_as);
       int as_name = (int)open_str.my_as;
       As::switch_neighbour(as_name, NB_ON);
+      cout << "=======================" << endl;
+      cout << "AS_" << as_name << " IS ON" << endl;
       As::add_nb_to_rt(as_name);
 
       // advertise routes
@@ -487,8 +485,8 @@ unsigned char * As::client_handle_msg(unsigned char *msg, const int bytes_receiv
 void As::switch_neighbour(int as_name, int state) {
   if (neighbours_state.find(as_name) != neighbours_state.end()) {
     neighbours_state[as_name] = state;
-    cout << "=======================" << endl;
-    cout << "NEIGHBOUR STATE UPDATED: " << as_name << " - " << neighbours_state[as_name] << endl;
+    //cout << "=======================" << endl;
+    //cout << "NEIGHBOUR STATE UPDATED: " << as_name << " - " << neighbours_state[as_name] << endl;
   }
 }
 
@@ -589,7 +587,7 @@ void As::add_nb_to_rt(int as_name){
   msg_update.path_value = (unsigned char *) malloc(1);
   msg_update.path_value[0] = as_name;
   if (As::rt.findRoute(as_name, 1, msg_update.path_value) == NULL) {
-    cout << "===========ADDING CALLED============" << endl;
+    cout << "===========ADDING "<< as_name <<" TO RT============" << endl;
     As::add_route(msg_update, 0);
 
     // notify the network
@@ -604,7 +602,7 @@ void As::withdrawn_nb_from_rt(int as_name) {
   msg_update.withdrawn_route = (unsigned char *) malloc(1);
   msg_update.withdrawn_route[0] = as_name;
   if (As::rt.findRoute(as_name, 1, msg_update.withdrawn_route) != NULL) {
-    cout << "===========WITHDRAWN CALLED============" << endl;
+    cout << "===========REMOVING "<< as_name <<" FROM RT============" << endl;
     As::remove_route(msg_update);
 
     // notify the network
@@ -644,37 +642,6 @@ void As::advertise_routes(int receiver) {
   }
 }
 
-void As::self_advertise() {
-  while (true) {
-    for (map<int, int>::iterator it=neighbours_state.begin(); it!=neighbours_state.end(); ++it) {
-      if (it->second == NB_ON) {
-        update_msg new_update_msg; 
-        new_update_msg.path_length = 1;
-        new_update_msg.path_value = (unsigned char *) malloc(1);
-        new_update_msg.path_value[0] = As::name;
-        //cout << "UPDATE INITIAL PATH_VALUE: " << (int)new_update_msg.path_value[0] << endl;
-        
-        int msg_size = 0;
-        unsigned char *msg= As::generate_UPDATE(&msg_size, new_update_msg);
-
-        free(new_update_msg.path_value);
-
-        int as_name = it->first;
-        if (neighbours.find(as_name) != neighbours.end()) {
-          char port[10];
-          strcpy(port, neighbours[as_name].c_str());
-          int status = bgp_send(port, msg, msg_size);
-          cout << "=======================" << endl;
-          cout << "UPDATE SENT TO: " << port << endl;
-        }
-
-        free(msg);
-      }
-    } 
-    sleep(3);
-  }
-}
-
 void As::send_client_packet(int src, int dest) {
   RoutingItem item = rt.queryRoute(dest);
   if ( item.destination != 0 ) {
@@ -698,7 +665,7 @@ void As::client_communication_simulation() {
     while (true) {
       int destination = 3; // for testing 
       As::send_client_packet(As::name, destination);
-      sleep(3);
+      sleep(CLIENT_MSG_INTERVAL);
     }
   }
 }
@@ -715,10 +682,6 @@ void As::run() {
 
   thread open_thread(&As::send_OPEN, this);
   open_thread.detach();
-
-  // Send UPDATE msg to self advertise
-  //thread advertise_thread(&As::self_advertise, this);
-  //advertise_thread.detach();
 
   thread client_thread(&As::client_communication_simulation, this);
   client_thread.detach();
