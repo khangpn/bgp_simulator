@@ -170,6 +170,7 @@ public:
 	void deserialize( unsigned char *buf, int size);
 	unsigned char *serialize();		// the checksum will be recalculated
 	unsigned char *getMessage();	// the message payload of Packet
+	void setMessage( unsigned char * message);
 	void setTTL( int ttl);	// will set the IP header TTL value
 	int getTTL(); // will set the IP header TTL value
 	void setDestip( int destip ); // will set the header value for destination IP
@@ -180,7 +181,6 @@ public:
 	void setMessageLength( int size );
 	int getMessageLength();
 	void setChecksum( unsigned short checksum );
-	//void setMessage( unsigned char * message);
 	void setMessage( unsigned char *message, int size );
 	void setPacketLength( int len );
 	int getPacketLength();
@@ -448,7 +448,7 @@ int Packet::getMessageLength()
 
 /*
  * set the message payload portion of packet
- * - ( does not copy data)
+ * - DOES COPY DATA (old behaviour: does not copy data)
  * - message is not included in checksum
  * - if changing message changes message size, the packet size length changes and header checksum must be changed
  */
