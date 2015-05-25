@@ -3,16 +3,31 @@
  *
  * also "SystemV2"
  *
- * A network simulation system for BGP action with routers and packets
+
+To create a IP packet
+1) create a new object Packet with constructor (see SystemV2_testing.cpp as an example)
+2) add a message to the Packet with Packet::setMessage(unsigned char* buf, size)
+3) checksum and packet length adjusted automatically in method setMessage
+4) get raw Packet as a pointer with Packet::getMessage (getMessage allocates the memory)
+
+NB.	There is no UDP and TCP header handling (currently).
+	There is only IP header and message payload handling (currently).
+
+ * This is also
+ * a network simulation system for BGP action with routers and packets
  *
  * -- "Option B": THIS NOT THE CHOSEN WAYFOR THE PROJECT:
  * -- may be we can just simulate network traffic and router action --
  * -- & forget about actual networking stuff provided by OS --
+
  *
  */
 
 // set to zero to kill all extra verbosity
-#define VERBOSE 2
+#ifndef VERBOSE
+#define VERBOSE 0
+#endif
+
 
 #include "ip_packet.cpp"
 
@@ -37,11 +52,22 @@ unsigned char *message = NULL;
 ip_header_t iph;
 
 public:
-	Packet() {;};
-	~Packet() {;};
+	Packet()
+	{
+		Packet(4, 0, 0, 0, 0, 0, 0, 0, 0); // blank IPv4 packet
+	}; // Empty constructor
+
+	// TODO "deserialize-constructor":
+	// Packet(unsigned char *, int size)
+
+	~Packet()
+	{
+		remove();
+	};
 
 	/*
-	 * IP packet
+	 * Constructor
+	 * IP packet header only (add message with setMessage)
 	 * - does not support optional headers
 	 * - hard-coded protocol setting of 6=TCP
 	 */
@@ -64,6 +90,7 @@ public:
 		header_size = iph.len;
 		packet_size = header_size;
 
+//remove this duplicate code with ::deserialize: // TODO
 /**/
 		// construct an IP packet bitstream:
 
@@ -106,6 +133,14 @@ public:
 		buf[i++] = (srcIP >>8) & 0xFF;
 		buf[i++] = (srcIP >>0) & 0xFF;
 /**/
+		// TODO poor code to update checksum after all:
+		int checksum =0;
+		checksum = IPchecksum( this->buf, this->getHeaderLengthBytes() );
+		this->setChecksum(checksum);
+
+		// buf should be set up-to-date as after the constructor the situation should be the same as with after serialize()
+		buf[10] = H2N(checksum) >> 8;
+		buf[11] = H2N(checksum) & 0xFF;
 };
 
 	/*
@@ -139,15 +174,18 @@ public:
 	void remove(); 				// remove packet (free memory)
 };
 
-void Packet::Print()
+void Packet::Print() // expects that the buf is filled
 {
+	unsigned char* tempBuf = (unsigned char*)malloc( PACKET_MAX_LEN );
+	tempBuf = this->serialize();
 	printf("Packet contents (in two lines after this) (format: {'index:hexvalue '}):\n");
 	for(int i =0; i<iph.len; i++)
 	{
-		printf("%2i:%02x ", i, (unsigned char)buf[i] );
+		printf("%2i:%02x ", i, (unsigned char)tempBuf[i] );
 		if ( (i>1) && (i%11==0) )
 			printf("\n");
 	}
+	free(tempBuf);
 
 	// print newline - but do not if printing of ipheader happened to already have just printed newline
 	if ( iph.len%11)
@@ -188,15 +226,16 @@ void Packet::recalculateChecksum()
 
 	// serialize and calculate new checksum
 	tempBuf = this->serialize();
-	newChecksum = IPchecksum((unsigned char *)tempBuf, this->getHeaderLengthBytes());
+	newChecksum = IPchecksum( tempBuf, this->getHeaderLengthBytes() );
 
-	// finish: clear reserverd memory and set new checksum
+	// finish: clear reserved memory and set new checksum
 	free(tempBuf);
 	this->setChecksum( newChecksum );
 }
 
 unsigned short Packet::getChecksum()
 {
+	this->recalculateChecksum();
 	return this->iph.checksum;
 }
 
@@ -207,12 +246,12 @@ void Packet::setChecksum( unsigned short checksum )
 
 /*
  * Receive incoming buffer to Packet and form IP header structure
+ * - copies all data from incoming parameter buf
+ * TODO: needs not return anything
  * @returns ip_header_t or NULL if incoming packet is not acceptable as IPv4 header
  */
 ip_header_t Packet::deserialize( unsigned char *buf, int size )
 {
-	ip_header_t iph;
-	ip_header_t iph_temp; // temporary memory structure
 	int error = 0; // count errors
 
 	// Initial test, for minimum length requirement.
@@ -223,9 +262,7 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
 		error++;
 	}
 
-	//memcpy(&iph, buf, 20); // 20 is ipheader minimum size, and the size of ip_header_t TODO make better
-
-	if (VERBOSE>0) printf("deserialized IP packet header:\n"); // TODO VERBOSE
+	if (VERBOSE>0) printf("deserialized IP packet header:\n");
 
 	// uses optimal verification strategy: complete structure is formed first and validity verification is done afterwards
 
@@ -248,8 +285,8 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
 
 	iph.checksum = N2H( buf[10] <<8 + buf[11] );
 
-	iph.sourceip = (int)buf[12];
-	iph.destip = (int)buf[16];
+	iph.sourceip = buf[12]<<24 + buf[13]<<16+ buf[14]<<8+buf[15];
+	iph.destip = buf[16]<<24 + buf[17]<<16+ buf[18]<<8+buf[19];
 
 	// the actual validity tests:
 
@@ -259,14 +296,23 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
 	}
 
 	//TODO
-	// step 1 check if IPv4 info is OK
-	// step 2 check IHL
-	// step 3 check length?
-	// step 4 check checksum?
-	// step 5 other? (let me see lecture notes)
+	// 	X 	step 1 check if IPv4 info is OK
+	// 	O 	step 2 check IHL
+	// 	~ 	step 3 check length?
+	// 	O 	step 4 check checksum?
+	// 	O 	step 5 other? (let me see lecture notes)
 
 	if (error)
 		printf("### ERROR: Packet::deserialize: error count:%i.\n", error);
+
+	// TODO is this correct
+	// TODO old message memory is not released?
+	if (this->message != NULL)
+		free(this->message);
+
+	this->message = (unsigned char*)malloc(iph.len);
+	memcpy(this->message, &buf[20], iph.len-iph.ihl*4 ); // TODO
+	//message = &buf[20];
 
 	return iph;
 }
@@ -277,15 +323,12 @@ ip_header_t Packet::deserialize( unsigned char *buf, int size )
  */
 unsigned char *Packet::serialize()
 {
-	// TODO make sure checksum is updated
-	printf("Packet length: %i\n", getPacketLength());
-
 	/**/
 			// construct an IP packet bitstream:
 
 			unsigned char byte;
 			int i = 0;
-			buf = (unsigned char*)malloc(iph.len);
+			unsigned char *buf = (unsigned char*)malloc(iph.len); // allocate all new buf and mem
 			if (buf == NULL) { printf("### ERROR: memory allocation error."); exit(2); }
 
 			// first byte
@@ -324,6 +367,7 @@ unsigned char *Packet::serialize()
 	/**/
 
 	// i should now be 20 (no optional headers)
+	if (i!=20) { printf("### ERROR i != 20"); exit(1); }
 	memcpy(&buf[i], this->message, getMessageLength() );
 
 	return buf;
@@ -353,14 +397,17 @@ int Packet::getMessageLength()
 }
 
 /*
- * set the message (=payload) portion of packet
- * - does not copy data
+ * set the message payload portion of packet
+ * - DOES COPY DATA (old behaviour: does not copy data)
  * - message is not included in checksum
  * - if changing message changes message size, the packet size length changes and header checksum must be changed
  */
 void Packet::setMessage( unsigned char *message, int size )
 {
-	this->message = message;
+	//this->message = message;
+	this->message = (unsigned char*)malloc(size); // allocate new mem
+	memcpy(this->message, message, size);
+
 	setMessageLength( size );
 	this->recalculateChecksum();
 }

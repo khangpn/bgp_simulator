@@ -1,3 +1,14 @@
+/*
+ * SystemV2_testing.cpp
+ *
+ * testing and example usage unit for SystemV2.cpp and it's IP packet handling functions
+ *
+ */
+
+#ifndef VERBOSE
+#define VERBOSE 2
+#endif
+
 #include "SystemV2.cpp"
 
 int main(void)
@@ -6,28 +17,47 @@ int main(void)
 
 	unsigned char payload[4]={'@','P','P',0};
 
+	// create a new packet
 	Packet p = Packet(IP_PACKET, 0, 0, 0, 0, 255, 6, 23100, 20500);
 	p.Print();
+	printf("Packet length: %i\n", p.getPacketLength());
+	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
+	printf("Add 4 byte message to packet.\n");
 	p.setMessage(payload, 4);
-	//p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
+	printf("Packet length: %i\n", p.getPacketLength());
 	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
 
-	ip_header_t iph;
-	unsigned char *buf;
-	buf = (unsigned char*)malloc( PACKET_MAX_LEN );
-
-	printf("\n--\n\n");
-
+	unsigned char *buf; // buffer for icoming packet
 	buf = p.serialize();
-	iph = p.deserialize(buf, PACKET_MAX_LEN);
-	p.Print();
-	printf("getMessage: %s.\n",p.getMessage()); // assumes that message happens to be null-terminated string!
-	//p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
-	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
+
+	printf("\n--\n\n"); // now test with serialized packet as bitstream in buffer buf
+	//Packet in = Packet(IP_PACKET, 0, 0, 0, 0, 31, 3, 0x1122, 0x3344); // yes, stoopid to initialize
+
+	Packet in;
+	ip_header_t iph;
+	iph = in.deserialize( buf, p.getPacketLength() );
+	in.Print();
+	printf("Packet length: %i\n", in.getPacketLength());
+	printf("getMessage: %s.\n",in.getMessage()); // assumes that message happens to be null-terminated string!
+	printf("Packet (header) checksum: %4x\n", in.getChecksum() );
+	//p.recalculateChecksum();
+	printf("Packet (header) checksum: %4x (again)\n", in.getChecksum() );
+	printf("Decrease packet header TTL value.\n");
+	in.setTTL( in.getTTL()-1 );
+	//p.recalculateChecksum();
+	printf("Packet (header) checksum: %4x (again)\n", in.getChecksum() );
+	in.Print();
+/*
+*/
+	//Code reserve for more testing:
+	// 	buf = (unsigned char*)malloc( PACKET_MAX_LEN );
+	//
+	// 	p.recalculateChecksum(); // TODO should not be needed, checksum will soon be calculated automatically when needed!
+	//
+
 
 	// TODO make checksum inside header
 	// TODO make proper checksum testing of header with checksum
-
 	// TODO receive & inspect incoming packet (as buf char*)
 
 	/*
