@@ -32,7 +32,7 @@ int main(void)
 	size = p.getPacketLength();
 	buf = p.serialize(); // returns new memory! (OK to loose p now)
 
-	printf("{%2x}\n--\n\n", buf[0]); // now test with serialized packet as bitstream in buffer buf
+	printf("\n--\n\n"); // now test with serialized packet as bitstream in buffer buf
 	//Packet in = Packet(IP_PACKET, 0, 0, 0, 0, 31, 3, 0x1122, 0x3344); // yes, stoopid to initialize
 
 	Packet in;
@@ -41,12 +41,10 @@ int main(void)
 	printf("Packet length: %i\n", in.getPacketLength());
 	printf("getMessage: %s.\n",in.getMessage()); // assumes that message happens to be null-terminated string!
 	printf("Packet (header) checksum: %4x\n", in.getChecksum() );
-	//p.recalculateChecksum();
 	printf("Packet (header) checksum: %4x (again)\n", in.getChecksum() );
 	printf("Decrease packet header TTL value.\n");
 	in.setTTL( in.getTTL()-1 );
-	//p.recalculateChecksum();
-	printf("Packet (header) checksum: %4x (again)\n", in.getChecksum() );
+	printf("Packet (header) checksum: %4x\n", in.getChecksum() );
 	in.Print();
 /*
 */

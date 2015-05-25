@@ -58,7 +58,6 @@ public:
 		if ( buf == NULL )
 		{
 			buf = (unsigned char*)malloc( PACKET_MAX_LEN );
-			printf("initA(): buf is now %4x\n", buf);
 		}
 		iph.ihl = 5; // default and minimum header length of five 32b long words
 		iph.ver = 4; // 4 for IPv4
@@ -70,9 +69,6 @@ public:
 
 	Packet()
 	{
-		printf("jhdebug hellofrom _shorter_ constructor\n");
-		printf("buf is now %04x (::Packet,shorter)\n", buf);
-		//Packet(4, 0, 0, 0, 0, 0, 0, 0, 0); // blank IPv4 packet
 		initA();
 		if (buf == NULL) { printf("### ERROR: memory allocation error. (::Packet,shorter)"); exit(2); }
 	}; // Empty constructor
@@ -93,7 +89,6 @@ public:
 	 */
 	Packet(int IP_PACKET, int TOS, int Identification, int Flags, int FO, int TTL, int Protocol, unsigned int srcIP , unsigned int dstIP)
 	{
-printf("jhdebug hellofrom longer constructor\n");
 		initA();// buf = (unsigned char*)malloc( PACKET_MAX_LEN );
 		if (buf == NULL) { printf("### ERROR: memory allocation error (::Packet,longer)."); exit(2); }
 
@@ -107,8 +102,8 @@ printf("jhdebug hellofrom longer constructor\n");
 		iph.ttl		= TTL; // Time-To-Live
 		iph.protocol	= 6; // 6=TCP, but what is good here TODO
 		iph.checksum	= 0; // calculated, zero for calulation phase
-		iph.sourceip	= dstIP;
-		iph.destip		= srcIP;
+		iph.sourceip	= srcIP;
+		iph.destip		= dstIP;
 
 		//header_size = iph.len;
 		//packet_size = header_size;
@@ -145,16 +140,16 @@ printf("jhdebug hellofrom longer constructor\n");
 		buf[i++] = 0;
 
 		// TODO endianness and other
-		buf[i++] = dstIP >>24 ;
-		buf[i++] = (dstIP >>16) & 0xFF;
-		buf[i++] = (dstIP >>8) & 0xFF;
-		buf[i++] = (dstIP >>0) & 0xFF;
-
-		// TODO endianness and other
 		buf[i++] = srcIP >>24 ;
 		buf[i++] = (srcIP >>16) & 0xFF;
 		buf[i++] = (srcIP >>8) & 0xFF;
 		buf[i++] = (srcIP >>0) & 0xFF;
+
+		// TODO endianness and other
+		buf[i++] = dstIP >>24 ;
+		buf[i++] = (dstIP >>16) & 0xFF;
+		buf[i++] = (dstIP >>8) & 0xFF;
+		buf[i++] = (dstIP >>0) & 0xFF;
 /**/
 		// TODO poor code to update checksum after all:
 		int checksum =0;
@@ -164,8 +159,6 @@ printf("jhdebug hellofrom longer constructor\n");
 		// buf should be set up-to-date as after the constructor the situation should be the same as with after serialize()
 		buf[10] = H2N(checksum) >> 8;
 		buf[11] = H2N(checksum) & 0xFF;
-
-printf("jhdebug iph.len:%i (at longer constr end)\n", iph.len);
 };
 
 	/*
@@ -197,25 +190,45 @@ printf("jhdebug iph.len:%i (at longer constr end)\n", iph.len);
 	void setHeaderLengthValue( int ihl );
 
 	void remove(); 				// remove packet (free memory)
+
+	void updateHeaderBuf();
 };
+
+/*
+ * Updates Packet internal structure buf for the header part to match IP header C struct
+ * - internal binary state is not updated when ip_header_t type C struct is updated so this is needed when it is needed to calculate with the buf, such as the Internet Checksum
+ */
+void Packet::updateHeaderBuf()
+{
+	if ( buf == NULL ) { printf("#ERR ::updateHeaderBuf buf is null\n"); exit(2); }
+	unsigned char* tempBuf = (unsigned char*)malloc( PACKET_MAX_LEN );
+	tempBuf = this->serialize();
+	memcpy(buf, tempBuf, getHeaderLengthBytes());
+	free(tempBuf);
+}
 
 void Packet::Print() // expects that the buf is filled
 {
-	//unsigned char* tempBuf = (unsigned char*)malloc( PACKET_MAX_LEN );
-	//tempBuf = this->serialize();
+	updateHeaderBuf();
 	if ( buf == NULL ) { printf("#ERR ::Print buf is null\n"); exit(2); }
-	printf("Packet contents (in two lines after this) (format: {'index:hexvalue '}):\n");
-	for(int i =0; i<iph.len; i++)
+	printf("Packet basic header contents (two lines + one line for up to 8 bytes of message):\n");
+	for(int i=0; i<iph.len; i++)
 	{
 		printf("%2i:%02x ", i, (unsigned char)buf[i] );
 		if ( (i>1) && (i%11==0) )
 			printf("\n");
 	}
-	//free(tempBuf);
 
 	// print newline - but do not if printing of ipheader happened to already have just printed newline
-	if ( iph.len%11)
+	if ( iph.len%11 )
 		printf("\n");
+
+	for(int i=0; ( i<8 ) && ( i<getMessageLength() ); i++)
+	{
+		printf("%2i:%02x ", i, (unsigned char)buf[i+this->getHeaderLengthBytes()] );
+	}
+	printf("\n");
+
 
 	printf("IP header field values in decimal:\n");
 	// print ip_headet_t iph
@@ -235,7 +248,8 @@ void Packet::Print() // expects that the buf is filled
 
 /*
  * Recalculate IP packet header checksum (update internal struct)
- * - packet header checksum must be updated every time header changes
+ * - packet header checksum must be updated every time header changes need to be fully completed
+ * - checksummin this is done in very expensive way here
  * - checksum can be calculated for the difference only, but this calculates for whole header
  * @params none
  * @returns none
@@ -243,18 +257,17 @@ void Packet::Print() // expects that the buf is filled
 void Packet::recalculateChecksum()
 {
 	unsigned short newChecksum = 0;
-//	unsigned char *tempBuf; // why unsigned char *tempBuf[PACKET_MAX_LEN] does not work?
-	//tempBuf = (unsigned char*)malloc( PACKET_MAX_LEN ); // allocate large enough buffer
+	unsigned char *tempBuf;
 
 	// clear checksum field for computation of checksum
 	this->setChecksum(0);
 
 	// serialize and calculate new checksum
-	//tempBuf = this->serialize();
+	tempBuf = this->serialize();
 	newChecksum = IPchecksum( buf, this->getHeaderLengthBytes() );
 
 	// finish: clear reserved memory and set new checksum
-	//free(tempBuf);
+	free(tempBuf);
 	this->setChecksum( newChecksum );
 }
 
@@ -271,26 +284,34 @@ void Packet::setChecksum( unsigned short checksum )
 
 /*
  * Receive incoming buffer to Packet and form IP header structure
- * - copies all data from incoming parameter buf
+ * - copies all data from incoming parameter bufIn
  * TODO: needs not return anything
  * @returns ip_header_t or NULL if incoming packet is not acceptable as IPv4 header
  */
 void Packet::deserialize( unsigned char *bufIn, int size )
 {
 	int error = 0; // count errors
-	unsigned char a;
-	unsigned char b;
-	a=bufIn[0];
-printf("a:%0x\n", a);
-b=buf[0];
-printf("b:%0x\n", b);
 	// Initial test, for minimum length requirement.
 	// Without having a minimum amount of data the result cannot form a valid IPv4 header.
+
 	if ( size < IP_HEADER_LENGTH_MINIMUM )
 	{
 		if (VERBOSE>1) printf("### ERROR: Packet::deserialize, size=%i<IP_HEADER_LENGTH_MINIMUM=%i\n", size, IP_HEADER_LENGTH_MINIMUM);
 		error++;
 	}
+
+	if ( size > PACKET_MAX_LEN )
+	{
+		if (VERBOSE>1) printf("### ERROR: Packet::deserialize, size=%i > PACKET_MAX_LEN=%i\n", size, PACKET_MAX_LEN);
+		error++;
+	}
+
+	if ( bufIn == NULL )
+	{
+		if (VERBOSE>1) printf("### ERROR: Packet::deserialize, bufIn == NULL\n");
+		error++;
+	}
+
 
 	if (VERBOSE>0) printf("deserialized IP packet header:\n");
 
@@ -315,8 +336,11 @@ printf("b:%0x\n", b);
 
 	iph.checksum = N2H( bufIn[10] <<8 + bufIn[11] );
 
-	iph.sourceip = bufIn[12]<<24 + bufIn[13]<<16+ bufIn[14]<<8+bufIn[15];
-	iph.destip = bufIn[16]<<24 + bufIn[17]<<16+ bufIn[18]<<8+bufIn[19];
+	iph.sourceip = (bufIn[12]<<24) + (bufIn[13]<<16) +( bufIn[14]<<8) + (bufIn[15]);
+	//int i; i=bufIn[14]<<8;	printf("sip: %2x %2x %2x %2x (=%i=%04xh/%i=%04xh) -> ", bufIn[12], bufIn[13], bufIn[14], bufIn[15], iph.sourceip, iph.sourceip, i,i );
+
+	iph.destip = (bufIn[16]<<24) + (bufIn[17]<<16) + (bufIn[18]<<8) + (bufIn[19]);
+	//i=bufIn[18]<<8+bufIn[19]; 	printf("dip: %2x %2x %2x %2x (=%i=%04xh/%i=%04xh) \n", bufIn[16], bufIn[17], bufIn[18], bufIn[19], iph.destip, iph.destip, i,i );
 
 	// the actual validity tests:
 
@@ -336,18 +360,7 @@ printf("b:%0x\n", b);
 	if (error)
 		printf("### ERROR: Packet::deserialize: error count:%i.\n", error);
 
-	// TODO is this correct
-	// TODO old message memory is not released?
-//	if (this->message != NULL)
-//		free(this->message);
-
-//	this->message = (unsigned char*)malloc(iph.len);
-//	memcpy(this->message, &buf[20], iph.len-iph.ihl*4 ); // TODO
-	//message = &buf[20];
-
 	memcpy(buf, bufIn, size); // copy everything into the internal buf, including the message portion
-
-	//return iph;
 }
 
 /*
@@ -389,21 +402,21 @@ unsigned char *Packet::serialize()
 			buf[i++] = 0;
 
 			// TODO endianness and other
-			buf[i++] = iph.destip >>24 ;
-			buf[i++] = (iph.destip >>16) & 0xFF;
-			buf[i++] = (iph.destip >>8) & 0xFF;
-			buf[i++] = (iph.destip >>0) & 0xFF;
-
-			// TODO endianness and other
 			buf[i++] = iph.sourceip >>24 ;
 			buf[i++] = (iph.sourceip >>16) & 0xFF;
 			buf[i++] = (iph.sourceip >>8) & 0xFF;
 			buf[i++] = (iph.sourceip >>0) & 0xFF;
+
+			// TODO endianness and other
+			buf[i++] = iph.destip >>24 ;
+			buf[i++] = (iph.destip >>16) & 0xFF;
+			buf[i++] = (iph.destip >>8) & 0xFF;
+			buf[i++] = (iph.destip >>0) & 0xFF;
 	/**/
 
 	// i should now be 20 (no optional headers)
 	if (i!=20) { printf("### ERROR i != 20"); exit(1); }
-	//memcpy(&buf[i], this->message, getMessageLength() );
+
 	unsigned char* returnBuf = (unsigned char*)malloc( iph.len );
 	memcpy(returnBuf, buf, getPacketLength() );
 
