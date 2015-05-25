@@ -105,12 +105,12 @@ void As::client_listen(char *port)
         unsigned char * msg_return = As::client_handle_msg(incoming_data_buffer, bytes_received, &len);
 
         /* Sending message */
-        if ((int)*msg_return != -1) {
-          //std::cout << "send()ing message..."  << std::endl;
-          //char msg[] = "Hi! I got your msg.";
-          ssize_t bytes_sent;
-          bytes_sent = send(new_sd, msg_return, len, 0);
-        }
+        //if ((int)*msg_return != -1) {
+        //  //std::cout << "send()ing message..."  << std::endl;
+        //  //char msg[] = "Hi! I got your msg.";
+        //  ssize_t bytes_sent;
+        //  bytes_sent = send(new_sd, msg_return, len, 0);
+        //}
         /* ========== END ========== */
     }
     else {

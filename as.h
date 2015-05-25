@@ -14,7 +14,7 @@ using namespace std;
 
 class RoutingItem {
   public:
-    int destination; // Instead of using IP prefixes, we use AS name to indicate AS
+    int destination = 0; // Instead of using IP prefixes, we use AS name to indicate AS
     int next_hop; // next router to send the packet to
     int path_length; 
     unsigned char * path; //Format: "1 2 3 4"
@@ -35,21 +35,21 @@ class RoutingItem {
     }
     string toString() {
       string data = "";
-      char tmps [200];// for temp storing a string, to avoid using C++11 std::to_string
+      //char tmps [200];// for temp storing a string, to avoid using C++11 std::to_string
 
-      snprintf(tmps,199,"%i,%i,%i,%i", destination, next_hop, path_length, priority);
-      //data += to_string(destination) + ',' +
-      //  to_string(next_hop) + ',' + to_string(path_length) +
-      //  ',' + to_string(priority) + ',';
-      data = tmps;
+      //snprintf(tmps,199,"%i,%i,%i,%i", destination, next_hop, path_length, priority);
+      data += to_string(destination) + ',' +
+        to_string(next_hop) + ',' + to_string(path_length) +
+        ',' + to_string(priority) + ',';
+      //data = tmps;
 
-      int tmpi;
+      //int tmpi;
       for (int i=0; i < path_length; i++) {
 
-    	//data += std::to_string((int)path[i]);
-        tmpi = (int)path[i];
-        snprintf(tmps, 199, "%i", tmpi);
-        data += tmps;
+    	  data += std::to_string((int)path[i]);
+        //tmpi = (int)path[i];
+        //snprintf(tmps, 199, "%i", tmpi);
+        //data += tmps;
 
         if ( i < (path_length - 1)) data += " ";
       }
@@ -178,5 +178,6 @@ class As {
     // Simulate clients' IP packet communication
     void send_client_packet(int src, int dest); 
     void client_communication_simulation(); 
+    void print();
     void run();
 };

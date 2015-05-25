@@ -11,18 +11,16 @@ using namespace std;
 //void As::bgp_listen(char *port);
 
 As::As (string as_config, string neighbours_config, string rt_config) {
-  cout << ">>> Setting up AS..." << endl;
+  //cout << ">>> Setting up AS..." << endl;
   As::setup_as(as_config);
-
-  cout << ">>> Setting up neighbours..." << endl;
+  //cout << ">>> Setting up neighbours..." << endl;
   neighbours = setup_neighbours(neighbours_config);
-
-  cout << ">>> Setting up routing table..." << endl;
+  //cout << ">>> Setting up routing table..." << endl;
   As::rt_from_file(rt_config);
 }
 
 void As::neighbours_from_file(string config) {
-  cout << ">>> Setting up neighbours..." << endl;
+  //cout << ">>> Setting up neighbours..." << endl;
   As::neighbours = As::setup_neighbours(config);
 }
 
@@ -46,11 +44,8 @@ void As::setup_as(string as_config) {
 	  std::getline(lineStream, client_port, ',');
     As::name = atoi(as_name.c_str());
     //As::name = std::stoi(as_name);
-    cout << "NAME: " << As::name << endl;
     As::port = as_port;
-    cout << "PORT: " << As::port << endl;
     As::client_port = client_port;
-    cout << "CLIENT PORT: " << As::client_port << endl;
 	  config_file.close();
   }
 }
@@ -469,12 +464,12 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
 unsigned char * As::client_handle_msg(unsigned char *msg, const int bytes_received, int * size) {
   unsigned char *msg_return, status[1];
   if (bytes_received > 0) {
-    cout << "===========CLIENT MSG RECEIVED============" << endl;
     Packet p;
 	  p.deserialize(msg, *size);
     int dest = p.getDestip();
     int src = p.getSourceip();
-    if (As::name != dest) {
+    cout << "===========CLIENT MSG RECEIVED FROM " << src <<"============" << endl;
+    if (As::name != dest && As::name != src) {
       cout << "===========FORWARDING MSG TO " << dest << "==========" << endl;
       thread sending_thread(&As::send_client_packet, this, src, dest);
       sending_thread.detach();
@@ -684,6 +679,7 @@ void As::send_client_packet(int src, int dest) {
   RoutingItem item = rt.queryRoute(dest);
   if ( item.destination != 0 ) {
     cout << "============CLIENT COMMUNICATION===========" << endl;
+    item.print();
 	  Packet p = Packet(4, 0, 0, 0, 0, 255, 6, src, dest);
     int next_hop = item.next_hop;
 
@@ -728,6 +724,13 @@ void As::run() {
   client_thread.detach();
 
   As::keep_alive();
+}
+
+void As::print() {
+    cout << "==========AS INFO===========" << endl;
+    cout << "NAME: " << As::name << endl;
+    cout << "PORT: " << As::port << endl;
+    cout << "CLIENT PORT: " << As::client_port << endl;
 }
 
 int main()
