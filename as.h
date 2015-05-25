@@ -69,7 +69,6 @@ class RoutingTable {
 #define NB_OFF 0
 #define NB_ON 1
 #define SETUP_CONFIG_FILENAME "as_configs"
-#define CLIENT_CONFIG_FILENAME "client_configs"
 #define SETUP_NEIGHBOUR_FILENAME "neighbours.csv"
 #define ROUTING_TABLE_FILENAME "routing_table.csv"
 #define PACKET_LENGTH 1500
@@ -81,6 +80,7 @@ class As {
   //map<string, int> neighbours_state;
   map<int, string> neighbours;
   map<int, int> neighbours_state;
+  map<int, string> neighbours_client;
   RoutingTable rt;
   const int HEADER_LENGTH = 18;
   const int OPEN_TYPE = 1;
@@ -119,7 +119,7 @@ class As {
   unsigned char * serialize_UPDATE(unsigned char * buffer, struct update_msg *value, int *size);
 
   public:
-    As(string, string, string, string);
+    As(string, string, string);
 
     string getPort() { return port; }
     int getName() { return name; }
@@ -133,7 +133,6 @@ class As {
     void setup_listener();
     void setup_client_listener();
     void setup_as(string);
-    void setup_client(string);
     void neighbours_from_file(string);
     void save_rt(string);
     void rt_from_file(string);

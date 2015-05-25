@@ -10,7 +10,7 @@ using namespace std;
 //void As::bgp_send(char *port, unsigned char *msg, const int msg_len);
 //void As::bgp_listen(char *port);
 
-As::As (string as_config, string neighbours_config, string rt_config, string client_config) {
+As::As (string as_config, string neighbours_config, string rt_config) {
   cout << ">>> Setting up AS..." << endl;
   As::setup_as(as_config);
 
@@ -19,9 +19,6 @@ As::As (string as_config, string neighbours_config, string rt_config, string cli
 
   cout << ">>> Setting up routing table..." << endl;
   As::rt_from_file(rt_config);
-
-  cout << ">>> Setting up AS clients..." << endl;
-  As::setup_client(client_config);
 }
 
 void As::neighbours_from_file(string config) {
@@ -43,30 +40,17 @@ void As::setup_as(string as_config) {
 	  stringstream lineStream(line);
 	  string as_name;
 	  string as_port;
+	  string client_port;
 	  std::getline(lineStream, as_name, ',');
 	  std::getline(lineStream, as_port, ',');
-    cout << "NAME: " << as_name << endl;
+	  std::getline(lineStream, client_port, ',');
     //As::name = atoi(as_name.c_str());
     As::name = std::stoi(as_name);
-    cout << "PORT: " << as_port << endl;
+    cout << "NAME: " << As::name << endl;
     As::port = as_port;
-	  config_file.close();
-  }
-}
-
-void As::setup_client(string client_config) {
-  ifstream config_file;
-  config_file.open( client_config );
-  if ( !config_file.is_open() ) {
-	  fprintf(stderr, "### error in opening file: ");
-	  fprintf(stderr, "%s", client_config.c_str());
-	  fprintf(stderr, "\n");
-  }
-  else {
-	  string client_port;
-	  getline(config_file, client_port);
-    cout << "CLIENT PORT: " << client_port << endl;
+    cout << "PORT: " << As::port << endl;
     As::client_port = client_port;
+    cout << "CLIENT PORT: " << As::client_port << endl;
 	  config_file.close();
   }
 }
@@ -89,12 +73,15 @@ map<int, string> As::setup_neighbours(string neighbours_config)
 	    stringstream lineStream(line);
 	    string tmp_name;
 	    string nb_port;
+	    string client_port;
 	    std::getline(lineStream, tmp_name, ',');
 	    std::getline(lineStream, nb_port, ',');
+	    std::getline(lineStream, client_port, ',');
 
       //int nb_name = atoi( tmp_name.c_str() ); // stoi was incompatible with a Cygwin setup
       int nb_name = std::stoi(tmp_name);
 	    neighbours[nb_name] = nb_port;
+	    neighbours_client[nb_name] = client_port;
 	    //neighbours_state[nb_name] = 0;
 	    neighbours_state[nb_name] = 0;
 	  }
@@ -481,13 +468,14 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
 
 unsigned char * As::client_handle_msg(unsigned char *msg, const int bytes_received, int * size) {
   unsigned char *msg_return, status[1];
+  cout << "===========CLIENT MSG============" << endl;
   if (bytes_received > 0) {
-    Packet p;
-	  ip_header_t iph;
-	  unsigned char *buf = (unsigned char*)malloc( PACKET_MAX_LEN );
-	  iph = p.deserialize(buf, PACKET_MAX_LEN);
-    cout << "===========CLIENT MSG============" << endl;
-    cout << iph.sourceip << ":" << iph.destip << endl;
+    //Packet p;
+	  //ip_header_t iph;
+	  //unsigned char *buf = (unsigned char*)malloc( PACKET_MAX_LEN );
+	  //iph = p.deserialize(buf, PACKET_MAX_LEN);
+    cout << msg << endl;
+    //cout << iph.sourceip << ":" << iph.destip << endl;
   }
   *size = 1;
   status[0] = 0;
@@ -687,7 +675,7 @@ void As::self_advertise() {
 }
 
 void As::client_communication_simulation() {
-  if (As::name != 3) {
+  if (As::name == 1) {
     while (true) {
       int destination = 3; // for testing 
       RoutingItem item = rt.queryRoute(destination);
@@ -700,11 +688,15 @@ void As::client_communication_simulation() {
 
         char port[10];
         strcpy(port, neighbours[next_hop].c_str());
+        cout << "PORT: " << neighbours[next_hop] << endl;
 
-	      unsigned char * buf = (unsigned char*)malloc( p.getHeaderLengthBytes() );
-	      buf = p.serialize();
+	      //unsigned char * buf = (unsigned char*)malloc( p.getHeaderLengthBytes() );
+	      //buf = p.serialize();
 
-        int status = client_send(port, buf, p.getHeaderLengthBytes());
+        int size = 0;
+        unsigned char *msg = As::generate_HEADER(4, &size);
+
+        int status = client_send(port, msg, size);
       }
       sleep(3);
     }
@@ -714,6 +706,9 @@ void As::client_communication_simulation() {
 void As::run() {
   thread listener_thread(&As::setup_listener, this);
   listener_thread.detach();
+
+  thread client_listener_thread(&As::setup_client_listener, this);
+  client_listener_thread.detach();
 
   //thread KEEPALIVE_thread(&As::keep_alive, this);
   //KEEPALIVE_thread.detach();
@@ -725,8 +720,8 @@ void As::run() {
   //thread advertise_thread(&As::self_advertise, this);
   //advertise_thread.detach();
 
-  thread client_thread(&As::client_communication_simulation, this);
-  client_thread.detach();
+  //thread client_thread(&As::client_communication_simulation, this);
+  //client_thread.detach();
 
   As::keep_alive();
 }
@@ -734,7 +729,7 @@ void As::run() {
 int main()
 {
   As as ( SETUP_CONFIG_FILENAME, SETUP_NEIGHBOUR_FILENAME, 
-    ROUTING_TABLE_FILENAME, CLIENT_CONFIG_FILENAME);
+    ROUTING_TABLE_FILENAME);
   as.run();
   return 0;
 }
