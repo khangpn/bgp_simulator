@@ -28,14 +28,15 @@ int main(void)
 	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
 
 	unsigned char *buf; // buffer for icoming packet
-	buf = p.serialize();
+	int size;
+	size = p.getPacketLength();
+	buf = p.serialize(); // returns new memory! (OK to loose p now)
 
-	printf("\n--\n\n"); // now test with serialized packet as bitstream in buffer buf
+	printf("{%2x}\n--\n\n", buf[0]); // now test with serialized packet as bitstream in buffer buf
 	//Packet in = Packet(IP_PACKET, 0, 0, 0, 0, 31, 3, 0x1122, 0x3344); // yes, stoopid to initialize
 
 	Packet in;
-	ip_header_t iph;
-	iph = in.deserialize( buf, p.getPacketLength() );
+	in.deserialize( buf, size );
 	in.Print();
 	printf("Packet length: %i\n", in.getPacketLength());
 	printf("getMessage: %s.\n",in.getMessage()); // assumes that message happens to be null-terminated string!
