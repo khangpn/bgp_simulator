@@ -428,6 +428,12 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
       // return message
       msg_return = As::generate_OPEN(size);
     }
+    // Handle KEEPALIVE msg
+    if (header_str.type == KEEPALIVE_TYPE) {
+      *size = 1;
+      status[0] = 0;
+      msg_return = status;
+    }
     // Handle UPDATE msg
     if (header_str.type == UPDATE_TYPE) {
       update_msg msg_update = deserialize_UPDATE(msg_body);
