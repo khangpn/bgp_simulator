@@ -14,7 +14,7 @@ using namespace std;
 
 class RoutingItem {
   public:
-    int destination; // Instead of using IP prefixes, we use AS name to indicate AS
+    int destination = 0; // Instead of using IP prefixes, we use AS name to indicate AS
     int next_hop; // next router to send the packet to
     int path_length; 
     unsigned char * path; //Format: "1 2 3 4"
@@ -70,7 +70,7 @@ class RoutingTable {
     void addItem(RoutingItem item);
     RoutingItem * getItems() { return RoutingTable::items; }
     RoutingItem getItem(int index) { return RoutingTable::items[index]; }
-    void addRoute(int as_name, int path_length, unsigned char * path, int priority);
+    int addRoute(int as_name, int path_length, unsigned char * path, int priority);
     //int removeRoute(int destination, int path_length, unsigned char * path);
     int removeRoute(int destination);
     int containNode(RoutingItem item, int as_name);
@@ -86,6 +86,7 @@ class RoutingTable {
 #define SETUP_CONFIG_FILENAME "as_configs"
 #define SETUP_NEIGHBOUR_FILENAME "neighbours.csv"
 #define ROUTING_TABLE_FILENAME "routing_table.csv"
+#define DEMO_CONFIG_FILE "demo_configs"
 #define PACKET_LENGTH 1500
 #define KEEPALIVE_INTERVAL 5
 #define OPEN_INTERVAL 5
@@ -170,8 +171,8 @@ class As {
     update_msg deserialize_UPDATE(unsigned char *);
 
     void switch_neighbour(int as_name, int state); //state = 0 (off) || 1 (on)
-    void add_route(update_msg, int priority);
-    void remove_route(update_msg);
+    int add_route(update_msg, int priority);
+    int remove_route(update_msg);
     unsigned char * handle_msg(unsigned char const* msg, int bytes_received, int * byte_sending);
     unsigned char * client_handle_msg(unsigned char * msg, int bytes_received, int * byte_sending);
 

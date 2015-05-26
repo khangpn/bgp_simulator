@@ -6,7 +6,7 @@ using namespace std;
 //  unsigned char * path; //Format: "1 2 3 4"
 //  int priority;
 //};
-void RoutingTable::addRoute(int destination, int path_length,
+int RoutingTable::addRoute(int destination, int path_length,
 unsigned char * path, int priority=0) {
   if (findRoute(destination, path_length, path) == NULL) {
     RoutingItem item;
@@ -18,6 +18,9 @@ unsigned char * path, int priority=0) {
 
     RoutingTable::items[RoutingTable::size] = item;
     RoutingTable::size++;
+    return 1;
+  } else {
+    return 0;
   }
 }
 

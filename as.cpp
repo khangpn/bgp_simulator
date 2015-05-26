@@ -202,8 +202,8 @@ void As::keep_alive()
           unsigned char *msg = As::generate_KEEPALIVE(&size);
           int status = bgp_send(port, msg, size);
           free(msg);
-          cout << "=======================" << endl;
-          cout << "KEEPALIVE SENT TO: " << as_name << endl;
+          //cout << "=======================" << endl;
+          //cout << "KEEPALIVE SENT TO: " << as_name << endl;
 
           if (status == -1) {
             cout << "=======================" << endl;
@@ -431,18 +431,22 @@ unsigned char * As::handle_msg(const unsigned char *msg, const int bytes_receive
     // Handle UPDATE msg
     if (header_str.type == UPDATE_TYPE) {
       update_msg msg_update = deserialize_UPDATE(msg_body);
-      cout << "===========RECEIVED UPDATE FROM: " << as_name <<"a ============" << endl;
+      cout << "===========RECEIVED UPDATE============" << endl;
       if ((int)msg_update.withdrawn_length > 0) {
-        As::remove_route(msg_update);
+        int deleted = As::remove_route(msg_update);
         // notify the network
-        thread transfer_thread(&As::notify_removing, this, msg_update);
-        transfer_thread.detach();
+        if (deleted > 0) {
+          thread transfer_thread(&As::notify_removing, this, msg_update);
+          transfer_thread.detach();
+        }
       }
       if ((int)msg_update.path_length > 0) {
-        As::add_route(msg_update, 0);
+        int added_items = As::add_route(msg_update, 0);
         // notify the network
-        thread transfer_thread(&As::notify_adding, this, msg_update);
-        transfer_thread.detach();
+        if (added_items > 0) {
+          thread transfer_thread(&As::notify_adding, this, msg_update);
+          transfer_thread.detach();
+        }
       }
 
       *size = 1;
@@ -491,31 +495,40 @@ void As::switch_neighbour(int as_name, int state) {
   }
 }
 
-void As::add_route(update_msg msg_update, int priority = 0){
+int As::add_route(update_msg msg_update, int priority = 0){
+  int added_items = 0;
   int path_length = (int)msg_update.path_length;
   int destination = (int)msg_update.path_value[0]; // The first node is the target AS
-  if (destination != As::name) {
-    As::rt.addRoute(destination, path_length, msg_update.path_value, priority);
+  int flag = 0;
+  for (int i = 0; i < path_length; i++) {
+    if (As::name == (int)msg_update.path_value[i])
+      flag = 1;
+  }
+  if (flag == 0) {
+    added_items = As::rt.addRoute(destination, path_length, msg_update.path_value, priority);
 
     As::rt.print_table();
 
     thread saving_thread(&As::save_rt, this, ROUTING_TABLE_FILENAME);
     saving_thread.detach();
   }
+  return added_items;
 }
 
-void As::remove_route(update_msg msg_update) {
+int As::remove_route(update_msg msg_update) {
+  int deleted = 0;
   int withdrawn_length = (int)msg_update.withdrawn_length;
   int destination = (int)msg_update.withdrawn_route[0]; // The first node is the target AS
   if (destination != As::name) {
     //As::rt.removeRoute(destination, withdrawn_length, msg_update.withdrawn_route);
-    As::rt.removeRoute(destination);
+    deleted = As::rt.removeRoute(destination);
 
     As::rt.print_table();
 
     thread saving_thread(&As::save_rt, this, ROUTING_TABLE_FILENAME);
     saving_thread.detach();
   }
+  return deleted;
 }
 
 void As::notify_adding(update_msg msg_update) {
@@ -604,11 +617,13 @@ void As::withdrawn_nb_from_rt(int as_name) {
   msg_update.withdrawn_route[0] = as_name;
   if (As::rt.findRoute(as_name, 1, msg_update.withdrawn_route) != NULL) {
     cout << "===========REMOVING "<< as_name <<" FROM RT============" << endl;
-    As::remove_route(msg_update);
+    int deleted = As::remove_route(msg_update);
 
     // notify the network
-    thread transfer_thread(&As::notify_removing, this, msg_update);
-    transfer_thread.detach();
+    if (deleted > 0) {
+      thread transfer_thread(&As::notify_removing, this, msg_update);
+      transfer_thread.detach();
+    }
   }
 }
 
@@ -663,15 +678,34 @@ void As::send_client_packet(int src, int dest) {
 	  unsigned char * msg = p.serialize();
 
     int status = client_send(port, msg, 20);
+  } else {
+      cout << "============CAN'T FIND ROUTE FROM " << src << " TO " << dest << endl;
   }
 }
 
 void As::client_communication_simulation() {
   if (As::name == 1) {
     while (true) {
-      int destination = 3; // for testing 
-      As::send_client_packet(As::name, destination);
-      sleep(CLIENT_MSG_INTERVAL);
+      //int destination = (rand() % 7) + 2; // Random select destination
+      // Read destination from file
+      ifstream demo_config;
+      demo_config.open( DEMO_CONFIG_FILE );
+      if ( !demo_config.is_open() ) {
+	      fprintf(stderr, "### error in opening file: ");
+	      fprintf(stderr, "%s", DEMO_CONFIG_FILE);
+	      fprintf(stderr, "\n");
+      }
+      else {
+        string as_name;
+	      getline(demo_config, as_name);
+        int destination = atoi(as_name.c_str());
+
+        cout << "============SENDING CLIENT MSG TO: " << destination << endl;
+        As::send_client_packet(As::name, destination);
+        sleep(CLIENT_MSG_INTERVAL);
+
+	      demo_config.close();
+      }
     }
   }
 }
