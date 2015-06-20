@@ -16,7 +16,7 @@ NB.	There is no UDP and TCP header handling (currently).
  * This is also
  * a network simulation system for BGP action with routers and packets
  *
- * -- "Option B": THIS NOT THE CHOSEN WAYFOR THE PROJECT:
+ * -- "Option B": THIS NOT THE CHOSEN WAY FOR THE PROJECT:
  * -- may be we can just simulate network traffic and router action --
  * -- & forget about actual networking stuff provided by OS --
 
@@ -38,18 +38,12 @@ NB.	There is no UDP and TCP header handling (currently).
 /*
  * Packet
  * - IP header special notes: destination and source IP addresses are not translated from host 32-bit int format to network byte order and vice versa!
- * - relies on PACKET_MAX_LEN, rather than a value provided by the Packet
+ * - relies on PACKET_MAX_LEN from ip_packet.cpp
  */
 class Packet
 {
 
 unsigned char *buf = NULL;
-
-//unsigned int packet_size = 0; // TODO not use this, use values iniph via getters and setters!
-//unsigned int header_size = 0; // TODO not use this, use values iniph via getters and setters!
-
-//unsigned char *message = NULL;
-
 ip_header_t iph;
 
 public:
@@ -61,7 +55,7 @@ public:
 		}
 		iph.ihl = 5; // default and minimum header length of five 32b long words
 		iph.ver = 4; // 4 for IPv4
-		iph.tos	= 0; // TOS
+		iph.tos	= 0; // TOS (type-of-service)
 		iph.len	= 20; // length of packet header, 20 bytes is minimum (5*4 bytes is just the header)
 		iph.protocol	= 6; // 6=TCP, but what is good here TODO
 		iph.checksum	= 0; // calculated, zero for calulation phase
@@ -180,7 +174,6 @@ public:
 	void setMessageLength( int size );
 	int getMessageLength();
 	void setChecksum( unsigned short checksum );
-	//void setMessage( unsigned char * message);
 	void setMessage( unsigned char *message, int size );
 	void setPacketLength( int len );
 	int getPacketLength();
@@ -207,9 +200,12 @@ void Packet::updateHeaderBuf()
 	free(tempBuf);
 }
 
+/*
+ * Print some of packet's contents in values and some of it in hex, with data labels.
+ */
 void Packet::Print() // expects that the buf is filled
 {
-	updateHeaderBuf();
+	updateHeaderBuf(); // packet header must be in serialized form for hex printout
 	if ( buf == NULL ) { printf("#ERR ::Print buf is null\n"); exit(2); }
 	printf("Packet basic header contents (two lines + one line for up to 8 bytes of message):\n");
 	for(int i=0; i<iph.len; i++)
@@ -249,8 +245,8 @@ void Packet::Print() // expects that the buf is filled
 /*
  * Recalculate IP packet header checksum (update internal struct)
  * - packet header checksum must be updated every time header changes need to be fully completed
- * - checksummin this is done in very expensive way here
- * - checksum can be calculated for the difference only, but this calculates for whole header
+ * - checksumming is done in very expensive way here
+ * - checksum can be calculated for the difference of changed values only, here it is always calculated for whole header
  * @params none
  * @returns none
  */
@@ -285,7 +281,6 @@ void Packet::setChecksum( unsigned short checksum )
 /*
  * Receive incoming buffer to Packet and form IP header structure
  * - copies all data from incoming parameter bufIn
- * TODO: needs not return anything
  * @returns ip_header_t or NULL if incoming packet is not acceptable as IPv4 header
  */
 void Packet::deserialize( unsigned char *bufIn, int size )
@@ -433,6 +428,8 @@ unsigned char *Packet::getMessage() // the message payload of Packet
 
 /*
  * Set packet's message (=payload) length
+ * - Does not change memory allocation as maximum size packet is initialized in the constuctor.
+ * - FIXME size value is not checked (can be set to larger than maximum)
  */
 void Packet::setMessageLength( int size )
 {
@@ -440,28 +437,29 @@ void Packet::setMessageLength( int size )
 	setPacketLength( getHeaderLengthBytes() + size );
 }
 
+
+/*
+ * return the length of message in bytes
+ */
 int Packet::getMessageLength()
 {
-	// the new size of packet is header length + message length
+	// the size of message is packet length - header length
 	return getPacketLength() - getHeaderLengthBytes();
 }
 
 /*
  * set the message payload portion of packet
- * - ( does not copy data)
+ * - DOES COPY DATA
  * - message is not included in checksum
  * - if changing message changes message size, the packet size length changes and header checksum must be changed
  */
 void Packet::setMessage( unsigned char *newMessage, int size )
 {
-	//this->message = message;
-//	this->message = (unsigned char*)malloc(size); // allocate new mem
 	unsigned char* message; // pointer to message portion of this->buf
 	message = buf + getHeaderLengthBytes();
 	memcpy(message, newMessage, size);
 
 	setMessageLength( size );
-	//this->recalculateChecksum();
 }
 
 /*
@@ -472,6 +470,9 @@ void Packet::setPacketLength( int len )
 	iph.len = len;
 }
 
+/*
+ * Get packet length (from the field in header)
+ */
 int Packet::getPacketLength()
 {
 	return iph.len;
@@ -485,6 +486,10 @@ int Packet::getHeaderLengthBytes()
 	return this->iph.ihl*4;
 }
 
+/*
+ * Sets packet's header's length to given number of bytes
+ * - used with care as may well result in incorrectly formed IP packet
+ */
 void Packet::setHeaderLengthBytes( int ihl_bytes )
 {
 	this->iph.ihl = ihl_bytes/4;
@@ -498,37 +503,58 @@ int Packet::getHeaderLengthValue()
 	return this->iph.ihl;
 }
 
+/*
+ * Set packet's header's length in raw field value with the given number of units of 32-bit words
+ */
 void Packet::setHeaderLengthValue( int ihl )
 {
 	this->iph.ihl = ihl;
 }
 
-void Packet::setTTL( int ttl ) // will set the IP header TTL value
+/*
+ * set the IP header TTL value
+ */
+void Packet::setTTL( int ttl )
 {
 	this->iph.ttl = ttl;
 }
 
-int Packet::getTTL() // will set the IP header TTL value
+/*
+ * set the IP header TTL value
+ */
+int Packet::getTTL()
 {
 	return this->iph.ttl;
 }
 
-void Packet::setDestip( int destip ) // will set the header value for destination IP
+/*
+ * set the header value for destination IP
+ */
+void Packet::setDestip( int destip )
 {
 	this->iph.destip = destip;
 }
 
-int Packet::getDestip() // will set the header value for destination IP
+/*
+ * set the header value for destination IP
+ */
+int Packet::getDestip()
 {
 	return this->iph.destip;
 }
 
-void Packet::setSourceip( int sourceip ) // will set the header value for destination IP
+/*
+ * set the header value for destination IP
+ */
+void Packet::setSourceip( int sourceip )
 {
 	this->iph.sourceip = sourceip;
 }
 
-int Packet::getSourceip() // will set the header value for destination IP
+/*
+ * set the header value for destination IP
+ */
+int Packet::getSourceip()
 {
 	return this->iph.sourceip;
 }

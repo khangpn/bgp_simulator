@@ -30,9 +30,9 @@ Contains info of current node.
 ### neigbours.csv
 Contains info of neighbours connected directly to the current node.
 
-``as_name_1,as_port_1,client_port_1
+`as_name_1,as_port_1,client_port_1
 
-as_name_2,as_port_2,client_port_2``
+as_name_2,as_port_2,client_port_2`
 
 ### routing_table.csv
 Contains routing_items which are routing info to any nodes in the network.
@@ -52,3 +52,6 @@ Go to every nodes and start it up by the command:
 While the simulation is running, we can directly edit routing_tables.csv to change priority value of a path to see the routing decision changed. The node should be restarted (cancel the script and start again) for the changes in routing_table.csv get effected.
 
 Editting demo_configs to change as_name can make the current node to send client message to another node. This does NOT need to be restarted.
+
+## Demonstration
+`demo.zip` contains the demonstration in the presentation. It contains 10 nodes. You can open it and start all nodes on to see the demo. 

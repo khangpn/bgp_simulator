@@ -21,7 +21,7 @@ struct ip_header_t {
 	unsigned int FO; // Fragmentation Offset (0 for first in fragmented sequence)
 	unsigned int ttl; // Time-To-Live
 	unsigned int protocol; // 6=TCP, but what is good here TODO
-	unsigned int checksum; // calculated, zero for calulation phase
+	unsigned int checksum; // calculated, zero for calculation phase
 	unsigned int sourceip;
 	unsigned int destip;
 };

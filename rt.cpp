@@ -279,6 +279,9 @@ void routeTable::printTableASPATH( string separator )
 	}
 } // ::printTableASPATH
 
+/**
+ * Print Routing table with default aspath separator of <tab>
+ */
 void routeTable::printTableASPATH()
 {
 	printTableASPATH("\t");

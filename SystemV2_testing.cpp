@@ -27,15 +27,14 @@ int main(void)
 	printf("Packet length: %i\n", p.getPacketLength());
 	printf("Packet (header) checksum: %4x\n", p.getChecksum() );
 
-	unsigned char *buf; // buffer for icoming packet
+	unsigned char *buf; // buffer for incoming packet
 	int size;
 	size = p.getPacketLength();
 	buf = p.serialize(); // returns new memory! (OK to loose p now)
 
 	printf("\n--\n\n"); // now test with serialized packet as bitstream in buffer buf
-	//Packet in = Packet(IP_PACKET, 0, 0, 0, 0, 31, 3, 0x1122, 0x3344); // yes, stoopid to initialize
 
-	Packet in;
+	Packet in; // received packet
 	in.deserialize( buf, size );
 	in.Print();
 	printf("Packet length: %i\n", in.getPacketLength());
@@ -63,25 +62,45 @@ int main(void)
 	 * Usage:
 	 *
 
-$ g++ -std=c++11 -lpthread SystemV2_testing.cpp && ./a
-Packet contents (in two lines after this) (format: {'index:hexvalue '}):
+$  g++ -std=c++11 SystemV2_testing.cpp -o SystemV2_testing && ./SystemV2_testing
+Packet basic header contents (two lines + one line for up to 8 bytes of message):
  0:45  1:00  2:14  3:00  4:00  5:00  6:00  7:00  8:ff  9:06 10:00 11:00
-12:00 13:00 14:50 15:14 16:00 17:00 18:5a 19:3c
+12:00 13:00 14:5a 15:3c 16:00 17:00 18:50 19:14
+
 IP header field values in decimal:
 ver:4. ihl:5. tos:0. len:   20. ide:0. fla:0. FrO:0. iph.ttl:255. iph.protocol:6.
-iph.sourceip:20500. iph.destip:23100.
+iph.sourceip:23100. iph.destip:20500.
+Packet length: 20
 Packet (header) checksum: fda7
+Add 4 byte message to packet.
+Packet length: 24
+Packet (header) checksum: f9a7
 
 --
 
 deserialized IP packet header:
-Packet contents (in two lines after this) (format: {'index:hexvalue '}):
- 0:45  1:00  2:14  3:00  4:00  5:00  6:00  7:00  8:ff  9:06 10:00 11:00
-12:00 13:00 14:50 15:14 16:00 17:00 18:5a 19:3c
+Packet basic header contents (two lines + one line for up to 8 bytes of message):
+ 0:45  1:00  2:18  3:00  4:00  5:00  6:00  7:00  8:ff  9:06 10:00 11:00
+12:00 13:00 14:5a 15:3c 16:00 17:00 18:50 19:14 20:40 21:50 22:50
+23:00
+ 0:40  1:50  2:50  3:00
 IP header field values in decimal:
-ver:4. ihl:5. tos:0. len:   20. ide:0. fla:0. FrO:0. iph.ttl:255. iph.protocol:6.
-iph.sourceip:20500. iph.destip:23100.
-Packet (header) checksum: fda7
+ver:4. ihl:5. tos:0. len:   24. ide:0. fla:0. FrO:0. iph.ttl:255. iph.protocol:6.
+iph.sourceip:23100. iph.destip:20500.
+Packet length: 24
+getMessage: @PP.
+Packet (header) checksum: f9a7
+Packet (header) checksum: f9a7 (again)
+Decrease packet header TTL value.
+Packet (header) checksum: faa7
+Packet basic header contents (two lines + one line for up to 8 bytes of message):
+ 0:45  1:00  2:18  3:00  4:00  5:00  6:00  7:00  8:fe  9:06 10:00 11:00
+12:00 13:00 14:5a 15:3c 16:00 17:00 18:50 19:14 20:40 21:50 22:50
+23:00
+ 0:40  1:50  2:50  3:00
+IP header field values in decimal:
+ver:4. ihl:5. tos:0. len:   24. ide:0. fla:0. FrO:0. iph.ttl:254. iph.protocol:6.
+iph.sourceip:23100. iph.destip:20500.
 
 	 *
 	 *
